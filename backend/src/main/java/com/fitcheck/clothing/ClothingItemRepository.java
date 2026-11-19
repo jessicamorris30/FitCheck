@@ -1,10 +1,30 @@
 package com.fitcheck.clothing;
 
-/**
- * Data access for ClothingItem, always scoped to the owning user.
- * TODO: extend JpaRepository<ClothingItem, UUID>.
- */
-public interface ClothingItemRepository {
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-    // TODO: query methods.
+/**
+ * Database access for {@link ClothingItem}.
+ *
+ * <p><b>Rule:</b> every method takes the owner's id. There's deliberately no "find any item by id"
+ * used by the API: {@code findByIdAndOwner_Id} returns empty for someone else's item, so the API
+ * answers 404 and doesn't even reveal that the item exists.
+ *
+ * <p>{@code Owner_Id} walks the relationship (item → owner → id), so Spring generates
+ * {@code WHERE user_id = ?}.
+ */
+public interface ClothingItemRepository extends JpaRepository<ClothingItem, UUID> {
+
+    /** The whole wardrobe, newest first. */
+    List<ClothingItem> findAllByOwner_IdOrderByCreatedAtDesc(UUID ownerId);
+
+    /** One category of the wardrobe (e.g. only SHOES), newest first. */
+    List<ClothingItem> findAllByOwner_IdAndCategoryOrderByCreatedAtDesc(UUID ownerId, ClothingCategory category);
+
+    /** One item, but only if it belongs to this owner. */
+    Optional<ClothingItem> findByIdAndOwner_Id(UUID id, UUID ownerId);
+
+    long countByOwner_Id(UUID ownerId);
 }
