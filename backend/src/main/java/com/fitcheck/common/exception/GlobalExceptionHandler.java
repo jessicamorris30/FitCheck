@@ -12,6 +12,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -62,6 +64,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {
         return respond(HttpStatus.BAD_REQUEST, "Request body is missing or malformed");
+    }
+
+    /** A required multipart part (e.g. "image") wasn't sent → 400. */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiError> handleMissingPart(MissingServletRequestPartException ex) {
+        return respond(HttpStatus.BAD_REQUEST, "Missing required part: " + ex.getRequestPartName());
+    }
+
+    /** Upload bigger than spring.servlet.multipart.max-file-size (10 MB) → 413. */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleTooLarge(MaxUploadSizeExceededException ex) {
+        return respond(HttpStatus.CONTENT_TOO_LARGE, "That file is too large (max 10 MB)");
     }
 
     /** A URL that no controller handles → 404. */
