@@ -1,49 +1,119 @@
 package com.fitcheck.auth;
 
+import com.fitcheck.auth.AuthService.AuthSession;
 import com.fitcheck.auth.dto.AuthResponse;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
-import com.fitcheck.user.dto.UserResponse;
+import com.fitcheck.common.exception.ApiError;
+import com.fitcheck.common.exception.UnauthorizedException;
+import com.fitcheck.config.JwtProperties;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.Duration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.WebUtils;
 
 /**
  * HTTP endpoints under /api/auth. These are public (see SecurityConfig).
  *
- * <p>Refresh and logout come in step 5, and register will then also log the new user in
- * (return tokens) instead of just returning the user.
+ * <p>Register, login and refresh return the access token in the JSON body and the refresh token
+ * in an HttpOnly cookie. The cookie handling lives here because cookies are an HTTP concern.
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtProperties jwt;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, JwtProperties jwt) {
         this.authService = authService;
+        this.jwt = jwt;
     }
 
-    /**
-     * POST /api/auth/register
-     * 201 Created + the new user, 400 if the body is invalid, 409 if the email is taken.
-     */
+    /** POST /api/auth/register → 201 + AuthResponse + refresh cookie. 400 invalid input, 409 email taken. */
     @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
-        return UserResponse.from(authService.register(request));
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return withRefreshCookie(HttpStatus.CREATED, authService.register(request));
+    }
+
+    /** POST /api/auth/login → 200 + AuthResponse + refresh cookie. 401 wrong email/password. */
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return withRefreshCookie(HttpStatus.OK, authService.login(request));
     }
 
     /**
-     * POST /api/auth/login
-     * 200 + AuthResponse (access token, expiry, user), 401 if the email/password don't match.
+     * POST /api/auth/refresh (no body; the browser sends the refresh cookie).
+     * → 200 + new AuthResponse + rotated cookie, or 401 + cookie cleared.
      */
-    @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request) {
+        String token = readRefreshCookie(request);
+        if (token == null) {
+            return unauthorized("No session");
+        }
+        try {
+            return withRefreshCookie(HttpStatus.OK, authService.refresh(token));
+        } catch (UnauthorizedException e) {
+            return unauthorized(e.getMessage());
+        }
+    }
+
+    /** POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice. */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        String token = readRefreshCookie(request);
+        if (token != null) {
+            authService.logout(token);
+        }
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, clearCookie().toString()).build();
+    }
+
+    // ---- cookie helpers ----
+
+    private ResponseEntity<AuthResponse> withRefreshCookie(HttpStatus status, AuthSession session) {
+        return ResponseEntity.status(status)
+                .header(HttpHeaders.SET_COOKIE, refreshCookie(session.refreshToken(), jwt.refreshTokenTtl()).toString())
+                .body(session.body());
+    }
+
+    private ResponseEntity<ApiError> unauthorized(String message) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        return ResponseEntity.status(status)
+                .header(HttpHeaders.SET_COOKIE, clearCookie().toString())
+                .body(ApiError.of(status.value(), status.getReasonPhrase(), message));
+    }
+
+    /**
+     * HttpOnly: JavaScript can't read it. Secure: HTTPS only (off in dev). SameSite=Strict: never
+     * sent on requests started by other sites. Path: only sent to /api/auth/*, not every API call.
+     */
+    private ResponseCookie refreshCookie(String value, Duration maxAge) {
+        return ResponseCookie.from(jwt.refreshCookieName(), value)
+                .httpOnly(true)
+                .secure(jwt.refreshCookieSecure())
+                .sameSite("Strict")
+                .path(jwt.refreshCookiePath())
+                .maxAge(maxAge)
+                .build();
+    }
+
+    /** Same cookie with an empty value and Max-Age=0, which tells the browser to delete it. */
+    private ResponseCookie clearCookie() {
+        return refreshCookie("", Duration.ZERO);
+    }
+
+    private String readRefreshCookie(HttpServletRequest request) {
+        Cookie cookie = WebUtils.getCookie(request, jwt.refreshCookieName());
+        return cookie == null || cookie.getValue().isBlank() ? null : cookie.getValue();
     }
 }

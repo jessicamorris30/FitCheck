@@ -43,10 +43,11 @@ class AuthControllerTest {
                 { "email": "  New.User@Example.com ", "password": "correct-horse" }
                 """)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNotEmpty())
-                .andExpect(jsonPath("$.email").value("new.user@example.com"))
-                .andExpect(jsonPath("$.createdAt").isNotEmpty())
-                .andExpect(jsonPath("$.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.id").isNotEmpty())
+                .andExpect(jsonPath("$.user.email").value("new.user@example.com"))
+                .andExpect(jsonPath("$.user.createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.user.passwordHash").doesNotExist());
 
         User saved = users.findByEmailIgnoreCase("new.user@example.com").orElseThrow();
         assertThat(saved.getPasswordHash()).isNotEqualTo("correct-horse").startsWith("$2");
