@@ -8,6 +8,10 @@ spring:
     import: optional:file:../.env[.properties]
   profiles:
     default: dev
+  autoconfigure:
+    # Spring Boot would otherwise create a default in-memory "user" with a random password.
+    # FitCheck authenticates real users from the database with JWTs, so we turn that off.
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/fitcheck}
