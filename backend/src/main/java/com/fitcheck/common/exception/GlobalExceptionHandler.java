@@ -40,6 +40,12 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    /** Wrong credentials (e.g. bad login) → 401. */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex) {
+        return respond(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     /** Body is missing or isn't valid JSON → 400. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {

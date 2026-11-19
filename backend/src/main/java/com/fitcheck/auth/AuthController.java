@@ -1,5 +1,7 @@
 package com.fitcheck.auth;
 
+import com.fitcheck.auth.dto.AuthResponse;
+import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -13,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * HTTP endpoints under /api/auth. These are public (see SecurityConfig).
  *
- * <p>Step 3 has register only. Login, refresh and logout come in steps 4 and 5, and register
- * will then also log the new user in (return tokens) instead of just returning the user.
+ * <p>Refresh and logout come in step 5, and register will then also log the new user in
+ * (return tokens) instead of just returning the user.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -34,5 +36,14 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@Valid @RequestBody RegisterRequest request) {
         return UserResponse.from(authService.register(request));
+    }
+
+    /**
+     * POST /api/auth/login
+     * 200 + AuthResponse (access token, expiry, user), 401 if the email/password don't match.
+     */
+    @PostMapping("/login")
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }

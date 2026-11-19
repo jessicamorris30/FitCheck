@@ -1,5 +1,7 @@
 package com.fitcheck.config;
 
+import com.fitcheck.auth.JwtAuthenticationFilter;
+import com.fitcheck.auth.JwtService;
 import com.fitcheck.common.exception.ApiError;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -15,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -22,7 +25,7 @@ import tools.jackson.databind.json.JsonMapper;
  * (configured below) before it reaches a controller.
  *
  * <p>FitCheck is a stateless JSON API: the client proves who it is on every request with a
- * JWT in the Authorization header (added in step 4). So:
+ * JWT in the Authorization header (checked by JwtAuthenticationFilter). So:
  * <ul>
  *   <li>no server-side sessions,
  *   <li>no login form or HTTP Basic popup,
@@ -35,8 +38,11 @@ import tools.jackson.databind.json.JsonMapper;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper, JwtService jwtService)
+            throws Exception {
         http
+                // Check "Authorization: Bearer <jwt>" before Spring's own authentication filters.
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
                 .cors(Customizer.withDefaults()) // uses the CorsConfigurationSource bean from CorsConfig
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

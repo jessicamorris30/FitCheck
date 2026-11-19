@@ -1,6 +1,9 @@
 # Local development overrides (active by default; see spring.profiles.default).
 fitcheck:
   jwt:
+    # DEV ONLY fallback so the app runs without a .env file. Not a secret: it is public in git.
+    # JWT_SECRET from .env takes priority. Production must always set its own JWT_SECRET.
+    secret: ${JWT_SECRET:60J7yLIoBUJppflwDhcZcrYI/fjO2cEDKHFZ5zKtjzlkIYWVM3RJJGIpIuLfumgl}
     # The Vite dev server runs on http://localhost, so the refresh cookie can't require HTTPS locally.
     refresh-cookie-secure: false
 
