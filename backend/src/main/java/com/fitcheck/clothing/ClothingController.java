@@ -4,11 +4,16 @@ import com.fitcheck.auth.AuthenticatedUser;
 import com.fitcheck.clothing.dto.ClothingItemRequest;
 import com.fitcheck.clothing.dto.ClothingItemResponse;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,5 +50,22 @@ public class ClothingController {
             @RequestPart("image") MultipartFile image,
             @Valid @RequestPart("metadata") ClothingItemRequest metadata) {
         return clothingService.create(me.id(), metadata, image);
+    }
+
+    /**
+     * GET /api/clothing → your whole wardrobe, newest first.
+     * GET /api/clothing?category=SHOES → just one category. An unknown category → 400.
+     */
+    @GetMapping
+    public List<ClothingItemResponse> list(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @RequestParam(required = false) ClothingCategory category) {
+        return clothingService.list(me.id(), category);
+    }
+
+    /** GET /api/clothing/{id} → one of your items, or 404 (also for other users' items). */
+    @GetMapping("/{id}")
+    public ClothingItemResponse get(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable UUID id) {
+        return clothingService.get(me.id(), id);
     }
 }

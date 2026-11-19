@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -64,6 +65,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {
         return respond(HttpStatus.BAD_REQUEST, "Request body is missing or malformed");
+    }
+
+    /**
+     * A URL value has the wrong type, e.g. /api/clothing/not-a-uuid or ?category=CAPE → 400.
+     * (Without this, it would fall through to the catch-all and wrongly become a 500.)
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return respond(HttpStatus.BAD_REQUEST, "Invalid value for '" + ex.getName() + "'");
     }
 
     /** A required multipart part (e.g. "image") wasn't sent → 400. */
