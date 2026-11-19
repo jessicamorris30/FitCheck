@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
 import PlanPage from './pages/PlanPage.tsx'
 import RegisterPage from './pages/RegisterPage.tsx'
+import VerifyEmailPage from './pages/VerifyEmailPage.tsx'
 import WardrobePage from './pages/WardrobePage.tsx'
 import ProtectedRoute from './routes/ProtectedRoute.tsx'
 
@@ -13,6 +14,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      {/* Public: the email link may be opened on a device where the user isn't logged in. */}
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>

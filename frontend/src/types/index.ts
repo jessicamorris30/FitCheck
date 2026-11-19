@@ -3,6 +3,8 @@
 export interface User {
   id: string
   email: string
+  /** True once the user clicked the link in their confirmation email. */
+  emailVerified: boolean
   createdAt: string
 }
 

@@ -55,6 +55,23 @@ The refresh endpoint is the only one that relies on a cookie. It's protected by 
 | Endpoints and cookie handling | `auth/AuthController`, `auth/AuthService` |
 | Settings | `config/JwtProperties` (`fitcheck.jwt.*`) |
 
+## Email verification
+
+New accounts start unverified (`users.email_verified_at` is null) and can use the app straight away; a banner asks them to confirm.
+
+1. Sign-up creates a random 256-bit token, stores its SHA-256 hash in `email_verification_tokens` (valid 24 h), and publishes a `VerificationEmailRequested` event.
+2. `VerificationEmailListener` sends the email **after the transaction commits** (no email for a rolled-back sign-up) and **asynchronously** (sign-up doesn't wait for the mail server). A mail failure is logged and doesn't fail sign-up.
+3. The link opens `<FRONTEND_URL>/verify-email?token=...`. That page calls `POST /api/auth/verify-email`, which marks the token used and the user verified. Opening a valid link twice still succeeds.
+4. Logged-in users can resend with `POST /api/users/me/verification-email`. There's a 60-second cooldown (429), and a 409 if already verified.
+
+| Concern | Class |
+|---|---|
+| Token create / verify / resend | `auth/EmailVerificationService`, `auth/EmailVerificationToken` |
+| Building and sending email | `email/EmailSender`, `email/VerificationEmailListener` |
+| Settings | `config/EmailProperties` (`fitcheck.mail.*`), `spring.mail.*` for SMTP |
+
+Not enforced yet: unverified users can do everything. Later features (password reset, AI suggestions) can require `emailVerified`.
+
 ## Later hardening
 
 - Rate-limit `/auth/login` and `/auth/register`.

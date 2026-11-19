@@ -3,14 +3,8 @@ package com.fitcheck.auth;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
 import com.fitcheck.user.User;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +24,6 @@ public class RefreshTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
     private static final String INVALID = "Invalid or expired session";
-
-    /** Cryptographically strong randomness; never use java.util.Random for secrets. */
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final RefreshTokenRepository tokens;
     private final JwtProperties properties;
@@ -65,7 +56,7 @@ public class RefreshTokenService {
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public IssuedToken rotate(String rawToken) {
         Instant now = clock.instant();
-        RefreshToken current = tokens.findByTokenHash(hash(rawToken))
+        RefreshToken current = tokens.findByTokenHash(SecureTokens.sha256(rawToken))
                 .orElseThrow(() -> new UnauthorizedException(INVALID));
 
         if (current.isRevoked()) {
@@ -86,7 +77,7 @@ public class RefreshTokenService {
     /** Logout: retires the whole family. Unknown or already-revoked tokens are simply ignored. */
     @Transactional
     public void revoke(String rawToken) {
-        tokens.findByTokenHash(hash(rawToken))
+        tokens.findByTokenHash(SecureTokens.sha256(rawToken))
                 .ifPresent(t -> tokens.revokeFamily(t.getFamilyId(), clock.instant()));
     }
 
@@ -94,30 +85,9 @@ public class RefreshTokenService {
     }
 
     private Created create(User user, UUID familyId) {
-        String raw = newRawToken();
+        String raw = SecureTokens.newToken();
         Instant expiresAt = clock.instant().plus(properties.refreshTokenTtl());
-        RefreshToken saved = tokens.save(new RefreshToken(user, hash(raw), familyId, expiresAt));
+        RefreshToken saved = tokens.save(new RefreshToken(user, SecureTokens.sha256(raw), familyId, expiresAt));
         return new Created(saved, new IssuedToken(raw, user));
-    }
-
-    /** 32 random bytes (256 bits) as URL-safe text, which is impossible to guess. */
-    private static String newRawToken() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    /**
-     * SHA-256, not BCrypt: passwords need a slow hash because people pick guessable ones, but
-     * these tokens are 256 random bits, so a fast hash is already safe. It also gives the same
-     * output every time, which is what lets us look tokens up by hash.
-     */
-    static String hash(String rawToken) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }

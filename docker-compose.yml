@@ -1,5 +1,5 @@
 # Local development infrastructure for FitCheck.
-#   docker compose up -d     # start Postgres + Azurite
+#   docker compose up -d     # start Postgres + Azurite + Mailpit
 #   docker compose down      # stop (data is kept in named volumes)
 #   docker compose down -v   # stop and wipe all local data
 # Values come from the repo-root .env file (copy .env.example to .env).
@@ -32,6 +32,15 @@ services:
       - "10000:10000"
     volumes:
       - azurite-data:/data
+
+  # Mailpit catches every email the backend sends, so nothing reaches real inboxes in dev.
+  # Open http://localhost:8025 to read them.
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP (the backend sends here)
+      - "8025:8025" # web inbox
 
 volumes:
   postgres-data:

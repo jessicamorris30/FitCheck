@@ -12,6 +12,7 @@
 - [x] Register, login, refresh (rotation + reuse detection) and logout endpoints
 - [x] Frontend: Login/Register pages, `AuthProvider`, silent refresh, 401 interceptor, `ProtectedRoute` redirect
 - [x] Tests for token rotation and reuse detection
+- [x] Email verification on sign-up (Mailpit locally, SMTP provider in production)
 
 ## Phase 2: Wardrobe
 - [ ] `AzureStorageConfig`, `BlobStorageService` (upload, delete, SAS URLs)

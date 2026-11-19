@@ -11,6 +11,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  /** Replace the stored user, e.g. after the email is confirmed. Ignored if a different user. */
+  updateUser: (user: User) => void
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -88,11 +90,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const updateUser = useCallback((updated: User) => {
+    // Only update if it's the same person who is logged in (the link may be opened while
+    // logged in as someone else, or not logged in at all).
+    setUser((current) => (current && current.id === updated.id ? updated : current))
+  }, [])
+
   // useMemo: only hand children a new object when something actually changed,
   // so components using useAuth() don't re-render for no reason.
   const value = useMemo(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, register, logout, updateUser }),
+    [user, loading, login, register, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

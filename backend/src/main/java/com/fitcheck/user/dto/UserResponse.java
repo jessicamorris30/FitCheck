@@ -7,10 +7,12 @@ import java.util.UUID;
 /**
  * What the API shows about a user. Deliberately leaves out passwordHash: entities are never
  * returned directly from controllers, so a new sensitive column can't leak by accident.
+ *
+ * @param emailVerified whether the user has clicked the link in their confirmation email
  */
-public record UserResponse(UUID id, String email, Instant createdAt) {
+public record UserResponse(UUID id, String email, boolean emailVerified, Instant createdAt) {
 
     public static UserResponse from(User user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getCreatedAt());
+        return new UserResponse(user.getId(), user.getEmail(), user.isEmailVerified(), user.getCreatedAt());
     }
 }

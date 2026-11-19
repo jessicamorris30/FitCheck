@@ -4,9 +4,11 @@ import com.fitcheck.auth.AuthService.AuthSession;
 import com.fitcheck.auth.dto.AuthResponse;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
+import com.fitcheck.auth.dto.VerifyEmailRequest;
 import com.fitcheck.common.exception.ApiError;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
+import com.fitcheck.user.dto.UserResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,10 +34,12 @@ import org.springframework.web.util.WebUtils;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailVerificationService emailVerification;
     private final JwtProperties jwt;
 
-    public AuthController(AuthService authService, JwtProperties jwt) {
+    public AuthController(AuthService authService, EmailVerificationService emailVerification, JwtProperties jwt) {
         this.authService = authService;
+        this.emailVerification = emailVerification;
         this.jwt = jwt;
     }
 
@@ -66,6 +70,16 @@ public class AuthController {
         } catch (UnauthorizedException e) {
             return unauthorized(e.getMessage());
         }
+    }
+
+    /**
+     * POST /api/auth/verify-email {"token": "..."} → 200 + the now-verified user, or 400 if the
+     * link is invalid or expired. Public: the user may open the link on a device where they
+     * aren't logged in. The token itself proves they received the email.
+     */
+    @PostMapping("/verify-email")
+    public UserResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return UserResponse.from(emailVerification.verify(request.token()));
     }
 
     /** POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice. */

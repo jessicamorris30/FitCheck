@@ -30,17 +30,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokens;
+    private final EmailVerificationService emailVerification;
 
     /** A real BCrypt hash of a random string; only used to equalize login timing (see login). */
     private final String dummyHash;
 
     // Spring sees this constructor and passes in the matching beans ("dependency injection").
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-            RefreshTokenService refreshTokens) {
+            RefreshTokenService refreshTokens, EmailVerificationService emailVerification) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokens = refreshTokens;
+        this.emailVerification = emailVerification;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -73,6 +75,8 @@ public class AuthService {
             // the unique index in the database stops the second one and we land here.
             throw new ConflictException("An account with this email already exists");
         }
+        // Queues the "Confirm your email" message; it is sent after this transaction commits.
+        emailVerification.sendVerificationEmail(user);
         return startSession(user);
     }
 

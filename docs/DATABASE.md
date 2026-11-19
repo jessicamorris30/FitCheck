@@ -9,6 +9,7 @@ PostgreSQL 16. Flyway applies the migrations in `backend/src/main/resources/db/m
 ```mermaid
 erDiagram
   users ||--o{ refresh_tokens : has
+  users ||--o{ email_verification_tokens : has
   users ||--o{ clothing_items : owns
   users ||--o{ outfits : owns
   outfits ||--o{ outfit_items : contains
@@ -18,6 +19,7 @@ erDiagram
     uuid id PK
     varchar email "unique, case-insensitive"
     varchar password_hash "BCrypt"
+    timestamptz email_verified_at "null until confirmed"
     timestamptz created_at
     timestamptz updated_at
   }
@@ -29,6 +31,13 @@ erDiagram
     timestamptz expires_at
     timestamptz revoked_at
     uuid replaced_by FK
+  }
+  email_verification_tokens {
+    uuid id PK
+    uuid user_id FK
+    char token_hash "SHA-256 hex, unique"
+    timestamptz expires_at
+    timestamptz used_at
   }
   clothing_items {
     uuid id PK

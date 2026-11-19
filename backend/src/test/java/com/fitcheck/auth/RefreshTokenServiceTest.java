@@ -42,7 +42,7 @@ class RefreshTokenServiceTest {
         var issued = service.issue(newUser());
 
         assertThat(tokens.findByTokenHash(issued.value())).isEmpty();
-        RefreshToken stored = tokens.findByTokenHash(RefreshTokenService.hash(issued.value())).orElseThrow();
+        RefreshToken stored = tokens.findByTokenHash(SecureTokens.sha256(issued.value())).orElseThrow();
         assertThat(stored.isRevoked()).isFalse();
     }
 
@@ -51,8 +51,8 @@ class RefreshTokenServiceTest {
         var first = service.issue(newUser());
         var second = service.rotate(first.value());
 
-        RefreshToken old = tokens.findByTokenHash(RefreshTokenService.hash(first.value())).orElseThrow();
-        RefreshToken current = tokens.findByTokenHash(RefreshTokenService.hash(second.value())).orElseThrow();
+        RefreshToken old = tokens.findByTokenHash(SecureTokens.sha256(first.value())).orElseThrow();
+        RefreshToken current = tokens.findByTokenHash(SecureTokens.sha256(second.value())).orElseThrow();
 
         assertThat(old.isRevoked()).isTrue();
         assertThat(old.getReplacedBy()).isEqualTo(current.getId());
@@ -67,7 +67,7 @@ class RefreshTokenServiceTest {
 
         assertThatThrownBy(() -> service.rotate(first.value())).isInstanceOf(UnauthorizedException.class);
 
-        RefreshToken current = tokens.findByTokenHash(RefreshTokenService.hash(second.value())).orElseThrow();
+        RefreshToken current = tokens.findByTokenHash(SecureTokens.sha256(second.value())).orElseThrow();
         assertThat(current.isRevoked()).isTrue();
     }
 

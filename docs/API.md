@@ -19,6 +19,7 @@ Errors use one shape (`ApiError`):
 | POST | `/auth/login` | `{ email, password }` | `200 AuthResponse` + sets refresh cookie |
 | POST | `/auth/refresh` | none (uses the refresh cookie) | `200 AuthResponse` + rotates the refresh cookie |
 | POST | `/auth/logout` | none | `204`, revokes the token family and clears the cookie |
+| POST | `/auth/verify-email` | `{ token }` | `200 UserResponse`, or `400` if the link is invalid or expired |
 
 `AuthResponse`:
 
@@ -30,7 +31,8 @@ Errors use one shape (`ApiError`):
 
 | Method | Path | Response |
 |---|---|---|
-| GET | `/users/me` | `UserResponse` |
+| GET | `/users/me` | `UserResponse` `{ id, email, emailVerified, createdAt }` |
+| POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
 | DELETE | `/users/me` | `204` (deletes the account, all items, outfits and blobs) |
 
 ## Clothing
