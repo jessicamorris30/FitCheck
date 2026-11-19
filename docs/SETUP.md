@@ -39,7 +39,7 @@ docker compose ps        # both services should be running; postgres should be "
 | Service | Port | Purpose |
 |---|---|---|
 | postgres | 5432 | Database `fitcheck` (user and password `fitcheck` by default) |
-| azurite | 10000 | Azure Blob Storage emulator |
+| azurite | 10000 | Azure Blob Storage emulator (Azurite from npm, run in the `node` image because mcr.microsoft.com isn't reachable from every network; the first start takes ~30 s to download it) |
 | mailpit | 1025 / 8025 | Catches all outgoing email. Read it at **http://localhost:8025** |
 
 To wipe local data, run `docker compose down -v`.

@@ -7,6 +7,11 @@ fitcheck:
     # The Vite dev server runs on http://localhost, so the refresh cookie can't require HTTPS locally.
     refresh-cookie-secure: false
 
+  storage:
+    # DEV ONLY fallback: Azurite's publicly documented development account key (not a secret).
+    # AZURE_STORAGE_CONNECTION_STRING from .env takes priority.
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;}
+
 logging:
   level:
     com.fitcheck: DEBUG

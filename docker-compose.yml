@@ -24,14 +24,20 @@ services:
       retries: 10
 
   # Azurite emulates Azure Blob Storage locally (blob service only).
+  # Microsoft's own image lives on mcr.microsoft.com, which isn't reachable from every network,
+  # so we run the same emulator from npm inside the official Node image (Docker Hub).
+  # --skipApiVersionCheck: lets newer Azure SDKs talk to it.
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
+    image: node:22-alpine
     restart: unless-stopped
-    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --loose
+    command: >
+      npx -y azurite@3.37.0 azurite-blob
+      --blobHost 0.0.0.0 --blobPort 10000 --location /data --loose --skipApiVersionCheck
     ports:
       - "10000:10000"
     volumes:
       - azurite-data:/data
+      - azurite-npm-cache:/root/.npm # keeps the downloaded azurite package between restarts
 
   # Mailpit catches every email the backend sends, so nothing reaches real inboxes in dev.
   # Open http://localhost:8025 to read them.
@@ -45,3 +51,4 @@ services:
 volumes:
   postgres-data:
   azurite-data:
+  azurite-npm-cache:
