@@ -6,6 +6,16 @@ export interface User {
   createdAt: string
 }
 
+/** The JSON body of every backend error (ApiError.java). */
+export interface ApiError {
+  status: number
+  error: string
+  message: string
+  timestamp: string
+  /** Present on 400 validation errors: field name → message. */
+  fieldErrors?: Record<string, string>
+}
+
 export interface AuthResponse {
   accessToken: string
   expiresIn: number

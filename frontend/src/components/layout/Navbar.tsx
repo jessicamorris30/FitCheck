@@ -1,13 +1,21 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
 
-// Top navigation: Wardrobe, Plan, account menu.
-// TODO: add logout button and signed-in user email.
+/** Top navigation: Wardrobe, Plan, and the signed-in user with a logout button. */
 export default function Navbar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
   const link = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'font-semibold text-gray-900' : 'text-gray-500 hover:text-gray-900'
 
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
-    <nav className="flex items-center gap-6 border-b border-gray-200 px-6 py-3">
+    <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-gray-200 px-6 py-3">
       <span className="text-lg font-bold">FitCheck</span>
       <NavLink to="/wardrobe" className={link}>
         Wardrobe
@@ -15,6 +23,15 @@ export default function Navbar() {
       <NavLink to="/plan" className={link}>
         Plan
       </NavLink>
+
+      <div className="ml-auto flex items-center gap-4 text-sm">
+        {user && <span className="text-gray-500">{user.email}</span>}
+        {user && (
+          <button onClick={handleLogout} className="font-medium text-gray-900 hover:underline">
+            Log out
+          </button>
+        )}
+      </div>
     </nav>
   )
 }
