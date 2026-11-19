@@ -1,14 +1,21 @@
-import { Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import FullPageSpinner from '../components/ui/FullPageSpinner'
 import { useAuth } from '../hooks/useAuth'
 
 /**
- * Guards routes that require a signed-in user.
- * TODO: once auth works, redirect to /login when `user` is null:
- *   if (!user) return <Navigate to="/login" replace state={{ from: location }} />
- * Left open for now so placeholder pages are reachable during development.
+ * Wraps every page that needs a logged-in user (see App.tsx).
+ *
+ *  - Still checking for a saved session? Show a spinner, not the login page. Otherwise a
+ *    logged-in user would see the login form flash on every reload.
+ *  - Not logged in? Go to /login, remembering where they were headed (`state.from`) so the
+ *    login page can send them back there afterwards.
+ *  - Logged in? Render the requested page (<Outlet />).
  */
 export default function ProtectedRoute() {
-  const { loading } = useAuth()
-  if (loading) return <p className="p-8 text-gray-500">Loading…</p>
+  const { user, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) return <FullPageSpinner />
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />
   return <Outlet />
 }

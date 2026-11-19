@@ -6,12 +6,12 @@
 - [x] React + TS + Tailwind frontend generated (Vite), routes and placeholders
 - [x] Initial database schema (V1 migration)
 
-## Phase 1: Authentication
-- [ ] `JwtProperties`, `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`, `CorsConfig`
-- [ ] `User` and `RefreshToken` entities and repositories
-- [ ] Register, login, refresh (rotation + reuse detection) and logout endpoints
-- [ ] Frontend: Login/Register pages, `AuthProvider`, silent refresh, 401 interceptor, `ProtectedRoute` redirect
-- [ ] Tests for token rotation and reuse detection
+## Phase 1: Authentication ✅
+- [x] `JwtProperties`, `JwtService`, `JwtAuthenticationFilter`, `SecurityConfig`, `CorsConfig`
+- [x] `User` and `RefreshToken` entities and repositories
+- [x] Register, login, refresh (rotation + reuse detection) and logout endpoints
+- [x] Frontend: Login/Register pages, `AuthProvider`, silent refresh, 401 interceptor, `ProtectedRoute` redirect
+- [x] Tests for token rotation and reuse detection
 
 ## Phase 2: Wardrobe
 - [ ] `AzureStorageConfig`, `BlobStorageService` (upload, delete, SAS URLs)

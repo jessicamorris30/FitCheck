@@ -1,12 +1,12 @@
-import { createContext, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
-import { setAccessToken } from '../api/client'
+import { refreshSession, setAccessToken, setSessionExpiredHandler } from '../api/client'
 import type { AuthResponse, User } from '../types'
 
 export interface AuthContextValue {
   /** The logged-in user, or null when logged out. */
   user: User | null
-  /** True while the app checks for an existing session on first load (step 7). */
+  /** True while the app checks for an existing session on first load. */
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string) => Promise<void>
@@ -24,16 +24,44 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
  *    so a malicious script can't steal a stored copy.
  *  - refresh token → HttpOnly cookie set by the backend. This code never sees it.
  *
- * Until step 7, reloading the page forgets the in-memory token, so you appear logged out.
+ * Because memory is wiped on page reload, the app restores the session on startup by
+ * asking the backend for a fresh access token using the refresh cookie ("silent refresh").
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   /** Called after any successful login/register/refresh. */
   const startSession = useCallback((response: AuthResponse) => {
     setAccessToken(response.accessToken)
     setUser(response.user)
+  }, [])
+
+  // On first load: try to restore the session from the refresh cookie.
+  useEffect(() => {
+    let cancelled = false
+    refreshSession()
+      .then((response) => {
+        if (!cancelled) startSession(response)
+      })
+      .catch(() => {
+        // No cookie, or it expired/was revoked: simply logged out. Not an error.
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    // In development React StrictMode runs this effect twice on purpose. Both runs share the
+    // same refreshSession() request (see client.ts), so the cookie is still only used once.
+    return () => {
+      cancelled = true
+    }
+  }, [startSession])
+
+  // If a refresh fails mid-session (expired after 14 days, revoked, logged out elsewhere),
+  // the API client calls this and we drop the user. ProtectedRoute then redirects to /login.
+  useEffect(() => {
+    setSessionExpiredHandler(() => setUser(null))
+    return () => setSessionExpiredHandler(() => {})
   }, [])
 
   const login = useCallback(

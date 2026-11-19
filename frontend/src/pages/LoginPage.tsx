@@ -1,15 +1,21 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { parseApiError } from '../api/errors'
 import AuthCard from '../components/auth/AuthCard'
 import Button from '../components/ui/Button'
+import FullPageSpinner from '../components/ui/FullPageSpinner'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 
-/** Email + password sign-in. On success, go to the wardrobe. */
+/**
+ * Email + password sign-in. On success, go back to the page the user originally asked for
+ * (ProtectedRoute stores it in `location.state.from`), or to the wardrobe.
+ */
 export default function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, loading, login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/wardrobe'
 
   // "Controlled" inputs: React state is the source of truth for what's typed.
   const [email, setEmail] = useState('')
@@ -18,8 +24,10 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  // Still checking for a saved session? Wait instead of flashing the form.
+  if (loading) return <FullPageSpinner />
   // Already logged in? No reason to see this page.
-  if (user) return <Navigate to="/wardrobe" replace />
+  if (user) return <Navigate to={from} replace />
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault() // stop the browser's default full-page form submit
@@ -28,7 +36,7 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/wardrobe', { replace: true })
+      navigate(from, { replace: true })
     } catch (err) {
       const parsed = parseApiError(err)
       setError(parsed.message)

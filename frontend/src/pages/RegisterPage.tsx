@@ -3,12 +3,13 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { parseApiError } from '../api/errors'
 import AuthCard from '../components/auth/AuthCard'
 import Button from '../components/ui/Button'
+import FullPageSpinner from '../components/ui/FullPageSpinner'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 
 /** Account creation. The backend logs the new user in straight away. */
 export default function RegisterPage() {
-  const { user, register } = useAuth()
+  const { user, loading, register } = useAuth()
   const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
@@ -18,6 +19,7 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  if (loading) return <FullPageSpinner />
   if (user) return <Navigate to="/wardrobe" replace />
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
