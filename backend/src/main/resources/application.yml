@@ -1,0 +1,64 @@
+# FitCheck backend configuration.
+# Every secret/environment-specific value comes from an environment variable.
+# For local dev, values are read from the repo-root .env file (copy .env.example → .env).
+spring:
+  application:
+    name: FitCheck
+  config:
+    import: optional:file:../.env[.properties]
+  profiles:
+    default: dev
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fitcheck}
+    username: ${POSTGRES_USER:fitcheck}
+    password: ${POSTGRES_PASSWORD:fitcheck}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks entities match it.
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# ---- FitCheck application settings (bound via @ConfigurationProperties in com.fitcheck.config) ----
+fitcheck:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+  jwt:
+    # Base64-encoded HMAC key, at least 256 bits. Generate one per environment.
+    secret: ${JWT_SECRET:}
+    access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+    refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:14d}
+    refresh-cookie-name: fitcheck_refresh
+    refresh-cookie-path: /api/auth
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:true}
+
+  storage:
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
+    container-name: ${AZURE_STORAGE_CONTAINER:clothing-images}
+    sas-ttl: 15m
+
+  ai:
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-opus-5-5}
+    max-tokens: 16000
+    effort: medium

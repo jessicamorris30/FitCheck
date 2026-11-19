@@ -1,0 +1,10 @@
+# Local development overrides (active by default; see spring.profiles.default).
+fitcheck:
+  jwt:
+    # The Vite dev server runs on http://localhost, so the refresh cookie can't require HTTPS locally.
+    refresh-cookie-secure: false
+
+logging:
+  level:
+    com.fitcheck: DEBUG
+    org.springframework.security: INFO

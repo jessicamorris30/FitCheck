@@ -1,0 +1,38 @@
+# Local development infrastructure for FitCheck.
+#   docker compose up -d     # start Postgres + Azurite
+#   docker compose down      # stop (data is kept in named volumes)
+#   docker compose down -v   # stop and wipe all local data
+# Values come from the repo-root .env file (copy .env.example to .env).
+name: fitcheck
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fitcheck}
+      POSTGRES_USER: ${POSTGRES_USER:-fitcheck}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fitcheck}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fitcheck} -d ${POSTGRES_DB:-fitcheck}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Azurite emulates Azure Blob Storage locally (blob service only).
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    restart: unless-stopped
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --loose
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite-data:/data
+
+volumes:
+  postgres-data:
+  azurite-data:

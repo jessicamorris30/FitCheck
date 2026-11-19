@@ -1,0 +1,20 @@
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors (shared VS Code settings can be added under .vscode/ explicitly)
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+
+# backend/ and frontend/ have their own generated .gitignore files for build output.
