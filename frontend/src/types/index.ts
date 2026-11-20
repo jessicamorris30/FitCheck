@@ -47,8 +47,10 @@ export interface Outfit {
   id: string
   name: string
   notes: string | null
+  /** The outfit's clothing items, in order. */
   items: ClothingItem[]
   createdAt: string
+  updatedAt: string
 }
 
 export interface OutfitSuggestionRequest {
