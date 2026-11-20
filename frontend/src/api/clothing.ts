@@ -1,8 +1,10 @@
 import type { ClothingCategory, ClothingItem } from '../types'
 import { api } from './client'
 
-// TODO: implement once the backend /api/clothing endpoints exist (docs/API.md#clothing).
+// Endpoints under /api/clothing (docs/API.md). Every item's imageUrl is a short-lived signed
+// link: display it, don't store it.
 
+/** Your wardrobe, newest first. Pass a category to get only that category. */
 export async function listClothing(category?: ClothingCategory): Promise<ClothingItem[]> {
   const { data } = await api.get<ClothingItem[]>('/clothing', { params: { category } })
   return data
