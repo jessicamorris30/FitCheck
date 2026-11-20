@@ -7,7 +7,7 @@ import OutfitThumbnail from './OutfitThumbnail'
 
 /**
  * Your saved outfits as a grid, most recently changed first: collage thumbnail, name, item count.
- * Used by the Outfits tab. (Opening an outfit to edit or delete it comes in step 3.6.)
+ * Used by the Outfits tab. Click a card to open the outfit.
  */
 export default function SavedOutfitsList() {
   const [result, setResult] = useState<{ outfits: Outfit[]; error: string | null } | null>(null)
@@ -54,14 +54,18 @@ export default function SavedOutfitsList() {
   return (
     <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
       {result.outfits.map((outfit) => (
-        <li key={outfit.id} className="flex flex-col gap-2">
-          <OutfitThumbnail items={outfit.items} />
-          <div>
-            <p className="truncate font-medium">{outfit.name}</p>
-            <p className="text-sm text-gray-500">
-              {outfit.items.length} {outfit.items.length === 1 ? 'item' : 'items'}
-            </p>
-          </div>
+        <li key={outfit.id}>
+          <Link to={`/outfits/${outfit.id}`} className="group flex flex-col gap-2">
+            <div className="transition group-hover:opacity-90 group-hover:shadow-md">
+              <OutfitThumbnail items={outfit.items} />
+            </div>
+            <div>
+              <p className="truncate font-medium group-hover:underline">{outfit.name}</p>
+              <p className="text-sm text-gray-500">
+                {outfit.items.length} {outfit.items.length === 1 ? 'item' : 'items'}
+              </p>
+            </div>
+          </Link>
         </li>
       ))}
     </ul>

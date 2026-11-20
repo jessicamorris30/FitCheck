@@ -1,31 +1,43 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { parseApiError } from '../api/errors'
-import { createOutfit, MAX_OUTFIT_ITEMS } from '../api/outfits'
+import { createOutfit, MAX_OUTFIT_ITEMS, updateOutfit } from '../api/outfits'
 import OutfitCanvas from '../components/plan/OutfitCanvas'
 import OutfitItemPicker from '../components/plan/OutfitItemPicker'
 import SaveOutfitForm from '../components/plan/SaveOutfitForm'
 import SelectionBar from '../components/plan/SelectionBar'
-import type { ClothingItem } from '../types'
+import type { ClothingItem, Outfit } from '../types'
 
 type Stage = 'choose' | 'details'
+
+interface PlanPageProps {
+  /**
+   * When editing (route /outfits/:id/edit), the saved outfit to start from. The form, the chosen
+   * items and the step all start from it, and saving updates it instead of creating a new one.
+   * EditOutfitPage loads it first, so this page never has to wait for data.
+   */
+  existing?: Outfit
+}
 
 /**
  * Plan mode, as a two-step flow:
  *   1. Choose clothes: your wardrobe fills the page; picks collect in a bar at the bottom → Next.
- *   2. Details: arrange the order, name it, add notes, save → you land on the Outfits tab.
+ *   2. Details: arrange the order, name it, add notes, save.
  *
  * Both steps share ONE piece of state, the ordered list of chosen items, held here
  * ("lifting state up"). Going Back keeps your picks because the list lives in this page, not
  * inside either step's components.
  */
-export default function PlanPage() {
+export default function PlanPage({ existing }: PlanPageProps) {
   const navigate = useNavigate()
-  const [stage, setStage] = useState<Stage>('choose')
+  const editing = existing !== undefined
 
-  const [items, setItems] = useState<ClothingItem[]>([])
-  const [name, setName] = useState('')
-  const [notes, setNotes] = useState('')
+  // useState(initialValue) only uses the value on the first render, which is exactly what we
+  // want: start from the saved outfit, then let the user change things freely.
+  const [stage, setStage] = useState<Stage>(editing ? 'details' : 'choose')
+  const [items, setItems] = useState<ClothingItem[]>(existing?.items ?? [])
+  const [name, setName] = useState(existing?.name ?? '')
+  const [notes, setNotes] = useState(existing?.notes ?? '')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -67,10 +79,16 @@ export default function PlanPage() {
     setSaving(true)
     setError(null)
     setFieldErrors({})
+    const input = { name, notes, itemIds: items.map((i) => i.id) }
     try {
-      const saved = await createOutfit({ name, notes, itemIds: items.map((i) => i.id) })
-      // Off to the Outfits tab, which shows a "saved ✓" message for this outfit.
-      navigate('/outfits', { state: { justSaved: saved.name } })
+      if (existing) {
+        const saved = await updateOutfit(existing.id, input)
+        // replace: Back from the outfit page shouldn't return to this finished edit form.
+        navigate(`/outfits/${saved.id}`, { replace: true, state: { justSaved: saved.name } })
+      } else {
+        const saved = await createOutfit(input)
+        navigate('/outfits', { state: { justSaved: saved.name } })
+      }
     } catch (err) {
       const parsed = parseApiError(err)
       setError(parsed.message)
@@ -79,12 +97,14 @@ export default function PlanPage() {
     }
   }
 
+  const title = editing ? `Edit “${existing.name}”` : null
+
   if (stage === 'choose') {
     return (
       // pb-28: leave room so the last row of clothes isn't hidden behind the bottom bar.
       <section className="flex flex-col gap-6 pb-28">
         <header>
-          <p className="text-sm font-medium text-gray-500">Step 1 of 2</p>
+          <p className="text-sm font-medium text-gray-500">{title ? `${title} · ` : ''}Step 1 of 2</p>
           <h1 className="text-2xl font-semibold">Choose clothes</h1>
           <p className="text-sm text-gray-500">Click items to add them to your outfit. Click again to remove.</p>
         </header>
@@ -97,15 +117,17 @@ export default function PlanPage() {
   return (
     <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => goTo('choose')}
-          disabled={saving}
-          className="self-start text-sm text-gray-500 hover:text-gray-900"
-        >
-          ← Back to choosing clothes
-        </button>
-        <p className="text-sm font-medium text-gray-500">Step 2 of 2</p>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+          <button type="button" onClick={() => goTo('choose')} disabled={saving} className="hover:text-gray-900">
+            ← {editing ? 'Add or remove clothes' : 'Back to choosing clothes'}
+          </button>
+          {editing && (
+            <Link to={`/outfits/${existing.id}`} className="hover:text-gray-900">
+              Cancel editing
+            </Link>
+          )}
+        </div>
+        <p className="text-sm font-medium text-gray-500">{title ? `${title} · ` : ''}Step 2 of 2</p>
         <h1 className="text-2xl font-semibold">Arrange, name and save</h1>
       </header>
 
@@ -121,6 +143,7 @@ export default function PlanPage() {
           saving={saving}
           error={error}
           fieldErrors={fieldErrors}
+          submitLabel={editing ? 'Save changes' : 'Save outfit'}
         />
       </div>
     </section>

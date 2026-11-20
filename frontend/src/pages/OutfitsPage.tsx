@@ -8,7 +8,9 @@ import SavedOutfitsList from '../components/plan/SavedOutfitsList'
  */
 export default function OutfitsPage() {
   const location = useLocation()
-  const justSaved = (location.state as { justSaved?: string } | null)?.justSaved
+  const state = location.state as { justSaved?: string; justDeleted?: string } | null
+  const justSaved = state?.justSaved
+  const justDeleted = state?.justDeleted
 
   return (
     <section className="flex flex-col gap-6">
@@ -22,6 +24,11 @@ export default function OutfitsPage() {
       {justSaved && (
         <p role="status" className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
           “{justSaved}” saved ✓
+        </p>
+      )}
+      {justDeleted && (
+        <p role="status" className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">
+          “{justDeleted}” deleted.
         </p>
       )}
 

@@ -20,14 +20,17 @@
 - [x] Frontend: WardrobePage, ClothingGrid/Card, CategoryFilter, UploadClothingModal, ClothingDetailPage
 - [ ] Later: thumbnails, HEIC (iPhone) photos, tag search, pagination for large wardrobes
 
-## Phase 3: Plan mode (manual)
-- [ ] `Outfit` / `OutfitItem` entities, service and controller
-- [ ] Frontend: PlanPage with OutfitItemPicker and OutfitCanvas, save/list outfits
+## Phase 3: Plan mode (manual) ✅
+- [x] `Outfit` / `OutfitItem` entities, service and controller (create, list, view, edit, delete)
+- [x] Frontend: two-step Plan flow (choose clothes → arrange, name, save) and an Outfits tab to browse, open, edit and delete outfits
 
 ## Phase 4: AI suggestions
 - [ ] `AnthropicConfig`, `OutfitSuggestionService`, `AiController`
 - [ ] Text prompt, image prompt, structured output, item ID validation, refusal handling
 - [ ] Frontend: AiPromptPanel and SuggestionList, apply a suggestion to the canvas
+
+## Later: Outfit calendar
+- [ ] Put saved outfits on specific days ("wear this on Friday") with a simple week/month view
 
 ## Phase 5: Polish and deploy
 - [ ] Error handling (`GlobalExceptionHandler`), validation messages, loading/empty states

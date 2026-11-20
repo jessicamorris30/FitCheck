@@ -3,6 +3,8 @@ import Layout from './components/layout/Layout.tsx'
 import ClothingDetailPage from './pages/ClothingDetailPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
+import EditOutfitPage from './pages/EditOutfitPage.tsx'
+import OutfitDetailPage from './pages/OutfitDetailPage.tsx'
 import OutfitsPage from './pages/OutfitsPage.tsx'
 import PlanPage from './pages/PlanPage.tsx'
 import RegisterPage from './pages/RegisterPage.tsx'
@@ -25,6 +27,8 @@ export default function App() {
           <Route path="/wardrobe/:id" element={<ClothingDetailPage />} />
           <Route path="/plan" element={<PlanPage />} />
           <Route path="/outfits" element={<OutfitsPage />} />
+          <Route path="/outfits/:id" element={<OutfitDetailPage />} />
+          <Route path="/outfits/:id/edit" element={<EditOutfitPage />} />
         </Route>
       </Route>
 
