@@ -3,6 +3,7 @@ package com.fitcheck.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +35,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,6 +88,9 @@ class OutfitSuggestionTest {
     @BeforeEach
     void setUp() {
         fake = (FakeStylistClient) stylist;
+        // The fake is ONE shared object for the whole test class: reset what earlier tests left behind.
+        fake.lastRequest = null;
+        fake.answer = req -> new SuggestionResult(List.of());
         alice = users.saveAndFlush(new User("alice-" + UUID.randomUUID() + "@example.com", "hash"));
         User bob = users.saveAndFlush(new User("bob-" + UUID.randomUUID() + "@example.com", "hash"));
         tee = item(alice, "White tee", ClothingCategory.TOP, true);
@@ -174,6 +179,63 @@ class OutfitSuggestionTest {
                 .andExpect(jsonPath("$.fieldErrors.prompt").value("Describe the look you're going for"));
         mvc.perform(post("/api/ai/outfit-suggestions").contentType(MediaType.APPLICATION_JSON).content("{\"prompt\":\"x\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    // ---- inspiration photo (step 4.4) ----
+
+    @Test
+    void photoOnlyIsShrunkAndSentWithoutAPrompt() throws Exception {
+        fake.answer = req -> new SuggestionResult(List.of(new Suggestion("Like the photo", List.of(tee.getId()), "...")));
+
+        askWithPhoto(alice, null, TestImages.jpeg(2000, 1500)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions[0].title").value("Like the photo"));
+
+        assertThat(fake.lastRequest.prompt()).isNull();
+        var sent = TestImages.decode(fake.lastRequest.inspirationJpeg());
+        assertThat(sent.getWidth()).isEqualTo(1024); // 2000×1500 → at most 1024 on the long side
+        assertThat(sent.getHeight()).isEqualTo(768);
+    }
+
+    @Test
+    void photoAndTextAreSentTogether() throws Exception {
+        fake.answer = req -> new SuggestionResult(List.of(new Suggestion("Both", List.of(jeans.getId()), "...")));
+
+        askWithPhoto(alice, "but warmer", TestImages.png(300, 400)).andExpect(status().isOk());
+
+        assertThat(fake.lastRequest.prompt()).isEqualTo("but warmer");
+        assertThat(fake.lastRequest.inspirationJpeg()).isNotEmpty();
+    }
+
+    @Test
+    void needsAPromptOrAPhoto() throws Exception {
+        askWithPhoto(alice, "  ", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Describe the look you're going for, add an inspiration photo, or both."));
+    }
+
+    @Test
+    void rejectsAPhotoThatIsntAnImage() throws Exception {
+        askWithPhoto(alice, null, "definitely not a picture".getBytes())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The inspiration photo must be a JPEG, PNG or WebP image."));
+        assertThat(fake.lastRequest).isNull(); // Claude was never called
+    }
+
+    @Test
+    void rejectsATooLongPromptWithAPhoto() throws Exception {
+        askWithPhoto(alice, "x".repeat(501), TestImages.png(10, 10)).andExpect(status().isBadRequest());
+    }
+
+    private ResultActions askWithPhoto(User user, String prompt, byte[] photo) throws Exception {
+        var request = multipart("/api/ai/outfit-suggestions")
+                .header("Authorization", "Bearer " + jwt.createAccessToken(user.getId(), user.getEmail()));
+        if (photo != null) {
+            request.file(new MockMultipartFile("image", "inspo.jpg", "image/jpeg", photo));
+        }
+        if (prompt != null) {
+            request.param("prompt", prompt);
+        }
+        return mvc.perform(request);
     }
 
     private ResultActions ask(User user, String prompt) throws Exception {

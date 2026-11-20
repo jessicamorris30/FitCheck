@@ -41,7 +41,8 @@ public enum ImageType {
         return detect(head);
     }
 
-    static Optional<ImageType> detect(byte[] head) {
+    /** Same check on bytes already in memory (only the first 12 are looked at). */
+    public static Optional<ImageType> detect(byte[] head) {
         // JPEG: FF D8 FF
         if (startsWith(head, 0, 0xFF, 0xD8, 0xFF)) {
             return Optional.of(JPEG);

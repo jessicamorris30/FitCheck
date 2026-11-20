@@ -22,12 +22,17 @@ public final class StylistModels {
     }
 
     /**
-     * Everything Claude needs for one request.
+     * Everything Claude needs for one request. At least one of prompt / inspirationJpeg is set.
      *
-     * @param wardrobe the user's clothes, in a stable order (oldest first; see OutfitSuggestionService)
-     * @param prompt   what the user is going for, e.g. "rainy-day office look"
+     * @param wardrobe        the user's clothes, in a stable order (oldest first; see OutfitSuggestionService)
+     * @param prompt          what the user is going for, e.g. "rainy-day office look"; may be null
+     * @param inspirationJpeg a photo of a look the user likes (already downscaled to JPEG); may be null
      */
-    public record SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt) {
+    public record SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt, byte[] inspirationJpeg) {
+
+        public SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt) {
+            this(wardrobe, prompt, null);
+        }
     }
 
     /** One suggested outfit, pointing at wardrobe entries by id. */

@@ -7,7 +7,9 @@ import com.fitcheck.clothing.ClothingItemRepository;
 import com.fitcheck.clothing.dto.ClothingItemResponse;
 import com.fitcheck.common.exception.BadRequestException;
 import com.fitcheck.storage.BlobStorageService;
+import com.fitcheck.storage.ImageType;
 import com.fitcheck.storage.ThumbnailCache;
+import com.fitcheck.storage.ThumbnailService;
 import com.fitcheck.stylist.AiUnavailableException;
 import com.fitcheck.stylist.StylistClient;
 import com.fitcheck.stylist.StylistModels.Suggestion;
@@ -43,17 +45,42 @@ public class OutfitSuggestionService {
     private final ClothingItemRepository clothing;
     private final BlobStorageService storage;
     private final ThumbnailCache thumbnails;
+    private final ThumbnailService imageResizer;
     private final StylistClient stylist;
 
     public OutfitSuggestionService(ClothingItemRepository clothing, BlobStorageService storage,
-            ThumbnailCache thumbnails, StylistClient stylist) {
+            ThumbnailCache thumbnails, ThumbnailService imageResizer, StylistClient stylist) {
         this.clothing = clothing;
         this.storage = storage;
         this.thumbnails = thumbnails;
+        this.imageResizer = imageResizer;
         this.stylist = stylist;
     }
 
+    /** Largest side of an inspiration photo sent to Claude. Bigger costs more and adds nothing. */
+    static final int INSPIRATION_MAX_SIDE = 1024;
+    static final int MAX_PROMPT_LENGTH = 500;
+
     public SuggestionsResponse suggest(UUID ownerId, String prompt) {
+        return suggest(ownerId, prompt, null);
+    }
+
+    /**
+     * @param prompt      what the user is going for; may be blank if there's a photo
+     * @param inspiration the uploaded inspiration photo's bytes; may be null if there's a prompt
+     * @throws BadRequestException if both are missing, the prompt is too long, or the photo isn't a usable image
+     */
+    public SuggestionsResponse suggest(UUID ownerId, String prompt, byte[] inspiration) {
+        boolean hasPrompt = prompt != null && !prompt.isBlank();
+        if (!hasPrompt && inspiration == null) {
+            throw new BadRequestException("Describe the look you're going for, add an inspiration photo, or both.");
+        }
+        if (hasPrompt && prompt.length() > MAX_PROMPT_LENGTH) {
+            throw new BadRequestException("Please keep the description under 500 characters.");
+        }
+        // Checked BEFORE loading the wardrobe or calling Claude, so a bad photo costs nothing.
+        byte[] inspirationJpeg = inspiration == null ? null : prepareInspiration(inspiration);
+
         // 1. The wardrobe, OLDEST first. A new item is added at the end, so the start of the list
         //    (and the prompt-cache prefix built from it) stays the same as the wardrobe grows.
         List<ClothingItem> items = clothing.findAllByOwner_IdOrderByCreatedAtDesc(ownerId).stream()
@@ -66,7 +93,8 @@ public class OutfitSuggestionService {
 
         // 2. Ask Claude (the slow part).
         List<WardrobeEntry> wardrobe = items.stream().map(this::toEntry).toList();
-        SuggestionResult result = stylist.suggest(new SuggestionRequest(wardrobe, prompt));
+        SuggestionResult result = stylist.suggest(
+                new SuggestionRequest(wardrobe, hasPrompt ? prompt.trim() : null, inspirationJpeg));
 
         // 3. Never trust the answer blindly: keep only ids that really are this user's items.
         //    (Claude only sees this user's items, but checking costs nothing and protects against
@@ -82,6 +110,22 @@ public class OutfitSuggestionService {
             throw new AiUnavailableException("Claude's answer contained no usable outfits");
         }
         return new SuggestionsResponse(suggestions);
+    }
+
+    /**
+     * Same checks as clothing uploads (magic bytes, then a full decode), then shrink to at most
+     * 1024px as a JPEG. Re-encoding also drops the photo's metadata (EXIF), which can include the
+     * GPS location where it was taken, so that never leaves the server. The photo is not stored.
+     */
+    private byte[] prepareInspiration(byte[] bytes) {
+        if (ImageType.detect(bytes).isEmpty()) {
+            throw new BadRequestException("The inspiration photo must be a JPEG, PNG or WebP image.");
+        }
+        try {
+            return imageResizer.toJpeg(bytes, INSPIRATION_MAX_SIDE);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("We couldn't read that inspiration photo. Please try a different one.");
+        }
     }
 
     private WardrobeEntry toEntry(ClothingItem item) {
