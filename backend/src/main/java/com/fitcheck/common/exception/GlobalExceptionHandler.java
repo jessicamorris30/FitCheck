@@ -1,5 +1,6 @@
 package com.fitcheck.common.exception;
 
+import com.fitcheck.stylist.AiRefusedException;
 import com.fitcheck.stylist.AiUnavailableException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -61,6 +62,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAiUnavailable(AiUnavailableException ex) {
         log.warn("AI unavailable: {}", ex.getMessage());
         return respond(HttpStatus.SERVICE_UNAVAILABLE, "The AI stylist is unavailable right now. Please try again later.");
+    }
+
+    /** Claude declined the request → 422, with a message the user can act on. */
+    @ExceptionHandler(AiRefusedException.class)
+    public ResponseEntity<ApiError> handleAiRefused(AiRefusedException ex) {
+        return respond(HttpStatus.valueOf(422), "The stylist couldn't help with that request. Try describing it differently.");
     }
 
     /** Wrong credentials (e.g. bad login) → 401. */

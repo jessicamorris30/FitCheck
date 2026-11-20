@@ -28,4 +28,9 @@ public class NotConfiguredStylistClient implements StylistClient {
     public ConnectionCheck checkConnection() {
         throw new AiUnavailableException(MESSAGE);
     }
+
+    @Override
+    public StylistModels.SuggestionResult suggest(StylistModels.SuggestionRequest request) {
+        throw new AiUnavailableException(MESSAGE);
+    }
 }

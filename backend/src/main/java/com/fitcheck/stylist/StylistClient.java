@@ -11,7 +11,6 @@ package com.fitcheck.stylist;
  *   <li>Without an API key, a "not configured" implementation is used, and the rest of the app
  *       keeps working.
  * </ul>
- * Step 4.3 adds the method that actually suggests outfits.
  */
 public interface StylistClient {
 
@@ -27,6 +26,15 @@ public interface StylistClient {
      * @throws AiUnavailableException if not configured or the API can't be reached
      */
     ConnectionCheck checkConnection();
+
+    /**
+     * Asks Claude for 1-3 outfits made from the given wardrobe that match the prompt.
+     * The result may still contain ids that aren't in the wardrobe; the caller must check them.
+     *
+     * @throws AiRefusedException    if Claude declines the request
+     * @throws AiUnavailableException if not configured, the API fails, or the answer is unusable
+     */
+    StylistModels.SuggestionResult suggest(StylistModels.SuggestionRequest request);
 
     /** Result of {@link #checkConnection()}: what Claude replied and how many tokens it took. */
     record ConnectionCheck(String model, String reply, long inputTokens, long outputTokens) {
