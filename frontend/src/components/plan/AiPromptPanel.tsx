@@ -225,7 +225,13 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
         </div>
       )}
 
-      {suggestions && !loading && <SuggestionList suggestions={suggestions} onUse={onUse && ((s) => onUse(s, prompt))} />}
+      {suggestions && !loading && (
+        <SuggestionList
+          suggestions={suggestions}
+          // Remember what was asked, so the saved outfit can show where it came from.
+          onUse={onUse && ((s) => onUse(s, prompt.trim() || '(from an inspiration photo)'))}
+        />
+      )}
     </section>
   )
 }

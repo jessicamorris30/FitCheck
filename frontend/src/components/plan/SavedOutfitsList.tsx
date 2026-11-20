@@ -56,8 +56,16 @@ export default function SavedOutfitsList() {
       {result.outfits.map((outfit) => (
         <li key={outfit.id}>
           <Link to={`/outfits/${outfit.id}`} className="group flex flex-col gap-2">
-            <div className="transition group-hover:opacity-90 group-hover:shadow-md">
+            <div className="relative transition group-hover:opacity-90 group-hover:shadow-md">
               <OutfitThumbnail items={outfit.items} />
+              {outfit.aiPrompt && (
+                <span
+                  title={`AI stylist: “${outfit.aiPrompt}”`}
+                  className="absolute top-2 left-2 rounded-full bg-violet-600/90 px-2 py-0.5 text-xs font-medium text-white"
+                >
+                  ✨ AI
+                </span>
+              )}
             </div>
             <div>
               <p className="truncate font-medium group-hover:underline">{outfit.name}</p>

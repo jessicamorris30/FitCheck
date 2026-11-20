@@ -8,7 +8,7 @@ import OutfitCanvas from '../components/plan/OutfitCanvas'
 import OutfitItemPicker from '../components/plan/OutfitItemPicker'
 import SaveOutfitForm from '../components/plan/SaveOutfitForm'
 import SelectionBar from '../components/plan/SelectionBar'
-import type { ClothingItem, Outfit } from '../types'
+import type { ClothingItem, Outfit, OutfitSuggestion } from '../types'
 
 type Stage = 'choose' | 'details'
 
@@ -40,6 +40,8 @@ export default function PlanPage({ existing }: PlanPageProps) {
   const [items, setItems] = useState<ClothingItem[]>(existing?.items ?? [])
   const [name, setName] = useState(existing?.name ?? '')
   const [notes, setNotes] = useState(existing?.notes ?? '')
+  /** Set when the outfit came from an AI suggestion; saved with it and shown as "✨ AI". */
+  const [aiPrompt, setAiPrompt] = useState<string | null>(existing?.aiPrompt ?? null)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,11 +92,25 @@ export default function PlanPage({ existing }: PlanPageProps) {
     window.scrollTo({ top: 0 }) // each step starts at the top of the page
   }
 
+  /**
+   * "Use this outfit" on an AI suggestion: its items, title and reasoning become the outfit in
+   * progress, and you jump to step 2 to adjust and save it like any other outfit.
+   * (When editing an existing outfit, its name is kept: you asked for new clothes, not a new name.)
+   */
+  function applySuggestion(suggestion: OutfitSuggestion, prompt: string) {
+    setItems(suggestion.items.slice(0, MAX_OUTFIT_ITEMS))
+    if (!existing) setName(suggestion.title)
+    setNotes(suggestion.reasoning)
+    setAiPrompt(prompt)
+    setAiOpen(false)
+    goTo('details')
+  }
+
   async function save() {
     setSaving(true)
     setError(null)
     setFieldErrors({})
-    const input = { name, notes, itemIds: items.map((i) => i.id) }
+    const input = { name, notes, itemIds: items.map((i) => i.id), aiPrompt }
     try {
       if (existing) {
         const saved = await updateOutfit(existing.id, input)
@@ -134,7 +150,7 @@ export default function PlanPage({ existing }: PlanPageProps) {
             </button>
           )}
         </header>
-        {aiOpen && <AiPromptPanel onClose={() => setAiOpen(false)} />}
+        {aiOpen && <AiPromptPanel onClose={() => setAiOpen(false)} onUse={applySuggestion} />}
         <OutfitItemPicker selectedIds={selectedIds} onToggle={toggle} full={full} />
         <SelectionBar items={items} onClear={() => setItems([])} onNext={() => goTo('details')} />
       </section>
@@ -156,6 +172,12 @@ export default function PlanPage({ existing }: PlanPageProps) {
         </div>
         <p className="text-sm font-medium text-gray-500">{title ? `${title} · ` : ''}Step 2 of 2</p>
         <h1 className="text-2xl font-semibold">Arrange, name and save</h1>
+        {aiPrompt && (
+          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-900">
+            <span>✨ Suggested by the AI stylist for “{aiPrompt}”.</span>
+            <span className="text-violet-700">Change anything you like before saving.</span>
+          </p>
+        )}
       </header>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_minmax(300px,380px)]">

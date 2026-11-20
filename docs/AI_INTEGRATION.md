@@ -1,44 +1,62 @@
-# AI integration (Claude API)
+# AI stylist (Claude API)
 
-In plan mode, a user can ask for outfit ideas from their own wardrobe by describing an aesthetic in text, by uploading an inspiration image, or both.
+In Plan mode, **✨ Ask the AI stylist** suggests 1–3 outfits made **only from the user's own clothes**, from a text description, an inspiration photo, or both. **Use this outfit** opens it in Plan step 2, where it can be adjusted and saved. The saved outfit remembers the prompt (`outfits.ai_prompt`) and shows a ✨ AI badge.
 
 ## Principles
 
-- **Backend only.** The browser calls `POST /api/ai/outfit-suggestions`, and only `OutfitSuggestionService` talks to Claude. `ANTHROPIC_API_KEY` never reaches the frontend.
-- **Suggest only real items.** Claude may only choose from the clothing item IDs we send. The backend checks every returned ID against the user's wardrobe before responding.
-- **Structured output.** We ask for JSON that matches the `OutfitSuggestionResponse` shape, not free text that we'd have to parse.
+- **Backend only.** The browser calls FitCheck's own `/api/ai/*`, and only `ClaudeStylistClient` talks to Claude. `ANTHROPIC_API_KEY` lives in `.env` locally and in Azure settings/Key Vault in production. It never reaches the browser or git.
+- **Only real items.** Claude refers to clothes by item number. The backend maps the numbers back to ids and **drops anything that isn't the user's**, so clothes from an inspiration photo can never appear as owned.
+- **Structured output.** The answer has a guaranteed JSON shape (`{suggestions: [{title, itemNumbers, reasoning}]}`), derived from Java records. No parsing free text.
+- **Never on a test run.** Tests use `FakeStylistClient`. Real calls only happen in the app, or in the opt-in `@Tag("live")` test.
 
-## SDK and model
+## How a request works
 
-- Dependency: `com.anthropic:anthropic-java` (version set in `backend/pom.xml`).
-- Client: `AnthropicOkHttpClient`, created once as a bean in `config/AnthropicConfig`.
-- Model: `claude-opus-5-5` by default, configurable with `ANTHROPIC_MODEL` / `fitcheck.ai.model`.
-- Thinking is adaptive on this model. Set effort explicitly (`fitcheck.ai.effort`, default `medium`). Use `max_tokens` of about 16000 for non-streaming calls.
+```
+POST /api/ai/outfit-suggestions   (JSON {prompt}  or  multipart: prompt? + image?)
+ 1. Free checks: prompt and/or photo; prompt ≤ 500 chars; photo = real JPEG/PNG/WebP;
+    wardrobe not empty                                                     → 400
+ 2. Guard rails (AiUsageService): email confirmed → else 403; < 20 today (UTC) → else 429; record 1 use
+ 3. Build one request (ClaudeStylistClient):
+      system:  stylist rules (constant, so it can be cached)
+      user:    "Item 1: <details>" + thumbnail, "Item 2: …" …  ← cache breakpoint
+               [inspiration photo, shrunk to ≤1024px JPEG, EXIF/GPS removed, not stored]
+               "What I'm going for: <prompt>"
+      model claude-opus-5-5 · effort medium (explicit) · adaptive thinking · max_tokens 16000
+      structured output · server-side refusal fallbacks ("default", beta server-side-fallback-2026-07-01)
+ 4. stop_reason: refusal → 422 (counts) · not end_turn → 503 (refunded) · end_turn → read typed answer
+ 5. Item numbers → ids → keep only the user's items; drop empty suggestions (none left → 503, refunded)
+```
 
-## Request design
+## Cost and speed (measured, demo wardrobe of 9 items)
 
-1. **System prompt:** FitCheck's stylist role and rules. Use only the provided item IDs, propose up to N outfits, each a coherent combination (for example top + bottom + shoes, or dress + shoes), and explain the reasoning briefly.
-2. **Wardrobe context:** a compact list of the user's items, `{ id, name, category, color, tags }`. Keep it in a stable order so prompt caching works across repeated requests. Optionally add small thumbnails as image blocks if metadata alone isn't enough.
-3. **User turn:**
-   - the aesthetic prompt text, if given
-   - the inspiration image as a base64 `image` content block, if given (jpeg/png/webp/gif)
-4. **Output format:** `output_config.format` with a JSON schema for `{ suggestions: [{ title, itemIds[], reasoning }] }`.
+| Request | Input tokens | Output | ≈ Cost | Time |
+|---|---|---|---|---|
+| Text, cache written | ~2,170 | ~330 | ~1.7¢ | ~8 s |
+| Text, cache read | 2,138 cached + ~27 | ~290 | ~0.7¢ | ~8 s |
+| Photo only | ~3,300 (photo ≈ 1,050) | ~410 | ~2.4¢ | ~10 s |
 
-## Response handling
-
-1. Check `stop_reason` before reading content:
-   - `end_turn`: parse the structured JSON.
-   - `refusal`: return `422` with a friendly message. Never show raw model output.
-   - `max_tokens`: treat as a failure (log it, return `503`) or retry with a higher limit.
-2. Drop any suggestion that contains an ID not in the user's wardrobe.
-3. Map SDK exceptions (rate limit, overloaded, network) to `503` and log them. The SDK already retries some transient errors.
-
-## Cost and latency
-
-- Send metadata, not full images, for the wardrobe whenever possible.
-- Cache the stable prefix (system prompt + wardrobe list) with prompt caching.
-- Consider per-user rate limits on the AI endpoint.
+What keeps costs down:
+- **Thumbnails** (≤320px, ~20 KB each) instead of full photos.
+- **Prompt caching:** the wardrobe goes first, oldest first and in a stable order, so new items are appended and the prefix is reused for a few minutes.
+- **Item numbers** instead of UUIDs.
+- **A wardrobe cap** of 200 items.
+- **A daily limit** of 20 requests per user.
 
 ## Privacy
 
-Inspiration images and wardrobe metadata are sent to Anthropic only when the user explicitly asks for suggestions. Say this in the UI and in the privacy policy.
+The prompt, inspiration photo and wardrobe (item details plus small photos) are sent to Anthropic **only when the user presses Get suggestions**. The panel says so. The inspiration photo is re-encoded, which strips EXIF metadata including GPS location, and it is never stored. Claude keeps no memory between requests: each request is built from scratch.
+
+## Code map
+
+| Concern | Where |
+|---|---|
+| SDK calls, prompt, caching, structured output, stop reasons | `stylist/ClaudeStylistClient` |
+| Interface + no-key fallback + test fake | `stylist/StylistClient`, `NotConfiguredStylistClient`, `FakeStylistClient` (tests) |
+| Wardrobe gathering, photo prep, answer validation, refunds | `ai/OutfitSuggestionService` |
+| Confirmed email + daily limit | `ai/AiUsageService`, `ai_usage` table (V4) |
+| Settings | `config/AiProperties` (`fitcheck.ai.*`), `config/AnthropicConfig` |
+| Endpoints | `ai/AiController`: `GET /status`, `GET /usage`, `POST /outfit-suggestions` |
+| UI | `components/plan/AiPromptPanel`, `SuggestionList`; `PlanPage.applySuggestion` |
+
+Live connection check (fraction of a cent):
+`.\mvnw.cmd test "-Dtest=ClaudeConnectionLiveTest" "-Dtest.excludedGroups=none"`

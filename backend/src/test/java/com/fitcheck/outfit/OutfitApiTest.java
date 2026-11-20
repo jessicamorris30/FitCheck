@@ -79,6 +79,19 @@ class OutfitApiTest {
     }
 
     @Test
+    void remembersTheAiPromptOfAnAiOutfit() throws Exception {
+        mvc.perform(post("/api/outfits").header("Authorization", bearer(alice))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Rainy office\",\"itemIds\":[\"" + tee.getId() + "\"],"
+                                + "\"aiPrompt\":\"  smart-casual for a rainy day  \"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.aiPrompt").value("smart-casual for a rainy day"));
+
+        // Hand-made outfits have none.
+        create(alice, "Mine", null, jeans).andExpect(jsonPath("$.aiPrompt").doesNotExist());
+    }
+
+    @Test
     void cannotUseSomeoneElsesItem() throws Exception {
         create(alice, "Sneaky", null, tee, bobsHat)
                 .andExpect(status().isBadRequest())

@@ -50,6 +50,7 @@ public class OutfitService {
 
         Outfit outfit = new Outfit(users.getReferenceById(ownerId), request.name(), request.notes());
         outfit.replaceItems(items);
+        outfit.setAiPrompt(cleanPrompt(request.aiPrompt()));
         return toResponse(outfits.saveAndFlush(outfit));
     }
 
@@ -79,6 +80,7 @@ public class OutfitService {
 
         outfit.rename(request.name(), request.notes());
         outfit.replaceItems(items);
+        outfit.setAiPrompt(cleanPrompt(request.aiPrompt())); // PUT replaces everything, this too
         outfit.markChanged();
         outfits.flush(); // write now so the response shows the final updatedAt
         return toResponse(outfit);
@@ -117,11 +119,15 @@ public class OutfitService {
         return unique.stream().map(found::get).toList();
     }
 
+    private static String cleanPrompt(String aiPrompt) {
+        return aiPrompt == null || aiPrompt.isBlank() ? null : aiPrompt.trim();
+    }
+
     private OutfitResponse toResponse(Outfit outfit) {
         List<ClothingItemResponse> items = outfit.getClothingItems().stream()
                 .map(c -> ClothingItemResponse.from(c, storage))
                 .toList();
-        return new OutfitResponse(outfit.getId(), outfit.getName(), outfit.getNotes(), items,
+        return new OutfitResponse(outfit.getId(), outfit.getName(), outfit.getNotes(), outfit.getAiPrompt(), items,
                 outfit.getCreatedAt(), outfit.getUpdatedAt());
     }
 }

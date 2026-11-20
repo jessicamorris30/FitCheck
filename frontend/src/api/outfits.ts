@@ -9,6 +9,8 @@ export interface OutfitInput {
   notes?: string
   /** Clothing item ids in the order they should appear. 1-20 of your own items. */
   itemIds: string[]
+  /** The AI prompt this outfit came from, if any (kept on edits too). */
+  aiPrompt?: string | null
 }
 
 /** Maximum items in one outfit (matches the backend's Outfit.MAX_ITEMS). */

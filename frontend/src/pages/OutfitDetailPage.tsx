@@ -80,6 +80,11 @@ export default function OutfitDetailPage() {
             {outfit.items.length} {outfit.items.length === 1 ? 'item' : 'items'} · Updated{' '}
             {new Date(outfit.updatedAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
           </p>
+          {outfit.aiPrompt && (
+            <p className="mt-2 inline-block rounded-lg bg-violet-50 px-3 py-1 text-sm text-violet-900">
+              ✨ Suggested by the AI stylist for “{outfit.aiPrompt}”
+            </p>
+          )}
           {outfit.notes && <p className="mt-3 max-w-prose whitespace-pre-line text-gray-700">{outfit.notes}</p>}
         </div>
 

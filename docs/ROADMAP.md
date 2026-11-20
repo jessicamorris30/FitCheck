@@ -24,10 +24,12 @@
 - [x] `Outfit` / `OutfitItem` entities, service and controller (create, list, view, edit, delete)
 - [x] Frontend: two-step Plan flow (choose clothes → arrange, name, save) and an Outfits tab to browse, open, edit and delete outfits
 
-## Phase 4: AI suggestions
-- [ ] `AnthropicConfig`, `OutfitSuggestionService`, `AiController`
-- [ ] Text prompt, image prompt, structured output, item ID validation, refusal handling
-- [ ] Frontend: AiPromptPanel and SuggestionList, apply a suggestion to the canvas
+## Phase 4: AI stylist ✅
+- [x] Thumbnails for every clothing photo (also speeds up grids)
+- [x] `AnthropicConfig`, `StylistClient` (Claude via the official Java SDK, fake in tests), `OutfitSuggestionService`, `AiController`
+- [x] Text prompt, inspiration photo, structured output, prompt caching, item id validation, refusal handling and fallbacks
+- [x] Guard rails: confirmed email required, 20 requests per user per day, refunds when the AI fails
+- [x] Frontend: Ask the AI stylist panel and suggestion cards; Use this outfit, then save with a ✨ AI badge
 
 ## Later: Outfit calendar
 - [ ] Put saved outfits on specific days ("wear this on Friday") with a simple week/month view

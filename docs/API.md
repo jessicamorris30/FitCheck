@@ -55,24 +55,33 @@ Errors use one shape (`ApiError`):
 |---|---|---|---|
 | GET | `/outfits` | none | `OutfitResponse[]` |
 | GET | `/outfits/{id}` | none | `OutfitResponse` |
-| POST | `/outfits` | `{ name, notes?, itemIds[] }` | `201 OutfitResponse` |
-| PUT | `/outfits/{id}` | `{ name, notes?, itemIds[] }` | `OutfitResponse` |
-| DELETE | `/outfits/{id}` | none | `204` |
+| POST | `/outfits` | `{ name, notes?, itemIds[], aiPrompt? }` | `201 OutfitResponse` |
+| PUT | `/outfits/{id}` | `{ name, notes?, itemIds[], aiPrompt? }` (replaces everything) | `OutfitResponse` |
+| DELETE | `/outfits/{id}` | none | `204` (clothes are not affected) |
 
-## AI
+`OutfitResponse`: `{ id, name, notes, aiPrompt, items: ClothingItemResponse[], createdAt, updatedAt }`. `aiPrompt` is set when the outfit came from the AI stylist.
+
+## AI stylist
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/ai/outfit-suggestions` | multipart: `prompt` (text, optional), `image` (optional), `itemIds` (optional, repeatable) | `OutfitSuggestionResponse` |
-
-At least one of `prompt` or `image` is required.
+| GET | `/ai/status` | none | `{ configured, model }` (free) |
+| GET | `/ai/usage` | none | `{ used, limit, remaining, resetsAt }` (free) |
+| POST | `/ai/outfit-suggestions` | JSON `{ prompt }`, **or** multipart `prompt?` + `image?` (at least one) | `SuggestionsResponse` (~10–40 s) |
 
 ```json
 {
   "suggestions": [
-    { "title": "Rainy-day minimalist", "itemIds": ["uuid", "uuid", "uuid"], "reasoning": "..." }
+    { "title": "Classic Office Trench Look", "reasoning": "…", "items": [ /* ClothingItemResponse, in order */ ] }
   ]
 }
 ```
 
-Possible errors: `422` when the request is declined (for example, a refusal from Claude), `503` when the AI service is unavailable.
+Errors:
+- `400`: no prompt or photo, prompt over 500 characters, the photo isn't an image, or the wardrobe is empty
+- `403`: email not confirmed
+- `429`: 20 requests today (UTC)
+- `422`: Claude declined the request
+- `503`: AI not configured or unavailable (that request isn't counted)
+
+See [AI_INTEGRATION.md](AI_INTEGRATION.md).

@@ -22,5 +22,14 @@ public record OutfitRequest(
 
         @NotEmpty(message = "Add at least one item")
         @Size(max = Outfit.MAX_ITEMS, message = "An outfit can have at most 20 items")
-        List<@NotNull(message = "Item id is missing") UUID> itemIds) {
+        List<@NotNull(message = "Item id is missing") UUID> itemIds,
+
+        /** What was asked when this outfit came from the AI stylist; null for hand-made outfits. */
+        @Size(max = 1000, message = "AI prompt is too long")
+        String aiPrompt) {
+
+    /** For hand-made outfits (no AI prompt). */
+    public OutfitRequest(String name, String notes, List<UUID> itemIds) {
+        this(name, notes, itemIds, null);
+    }
 }

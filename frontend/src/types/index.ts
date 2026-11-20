@@ -50,6 +50,8 @@ export interface Outfit {
   id: string
   name: string
   notes: string | null
+  /** What was asked of the AI stylist if this outfit came from a suggestion; null if hand-made. */
+  aiPrompt: string | null
   /** The outfit's clothing items, in order. */
   items: ClothingItem[]
   createdAt: string
