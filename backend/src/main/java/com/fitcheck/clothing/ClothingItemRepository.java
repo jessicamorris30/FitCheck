@@ -1,5 +1,6 @@
 package com.fitcheck.clothing;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,4 +28,10 @@ public interface ClothingItemRepository extends JpaRepository<ClothingItem, UUID
     Optional<ClothingItem> findByIdAndOwner_Id(UUID id, UUID ownerId);
 
     long countByOwner_Id(UUID ownerId);
+
+    /**
+     * Several items at once (WHERE id IN (...) AND user_id = ?), used when building outfits.
+     * Ids that don't exist or belong to someone else are simply missing from the result.
+     */
+    List<ClothingItem> findAllByIdInAndOwner_Id(Collection<UUID> ids, UUID ownerId);
 }
