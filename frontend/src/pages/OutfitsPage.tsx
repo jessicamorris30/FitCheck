@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import SavedOutfitsList from '../components/plan/SavedOutfitsList'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * The Outfits tab: browse everything you've saved.
@@ -7,6 +8,7 @@ import SavedOutfitsList from '../components/plan/SavedOutfitsList'
  * (passed along in the navigation "state", not the URL, so a reload doesn't repeat it).
  */
 export default function OutfitsPage() {
+  useDocumentTitle('Outfits')
   const location = useLocation()
   const state = location.state as { justSaved?: string; justDeleted?: string } | null
   const justSaved = state?.justSaved

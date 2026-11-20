@@ -75,6 +75,11 @@ fitcheck:
     refresh-cookie-path: /api/auth
     refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:true}
 
+  # Limits on login, sign-up and email-sending endpoints, plus a per-account lock after
+  # 5 wrong passwords (see security/RateLimitFilter and LoginAttemptService).
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+
   mail:
     from: ${MAIL_FROM:FitCheck <no-reply@fitcheck.local>}
     frontend-url: ${FRONTEND_URL:http://localhost:5173}

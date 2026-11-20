@@ -9,6 +9,7 @@ import OutfitItemPicker from '../components/plan/OutfitItemPicker'
 import SaveOutfitForm from '../components/plan/SaveOutfitForm'
 import SelectionBar from '../components/plan/SelectionBar'
 import type { ClothingItem, Outfit, OutfitSuggestion } from '../types'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 type Stage = 'choose' | 'details'
 
@@ -31,6 +32,7 @@ interface PlanPageProps {
  * inside either step's components.
  */
 export default function PlanPage({ existing }: PlanPageProps) {
+  useDocumentTitle(existing ? 'Edit outfit' : 'Plan')
   const navigate = useNavigate()
   const editing = existing !== undefined
 

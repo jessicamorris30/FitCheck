@@ -5,6 +5,7 @@ import { parseApiError } from '../api/errors'
 import AuthCard from '../components/auth/AuthCard'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * /forgot-password: ask for a reset link by email.
@@ -13,6 +14,7 @@ import TextField from '../components/ui/TextField'
  * same answer for every address, so this page can't be used to find out who has an account.
  */
 export default function ForgotPasswordPage() {
+  useDocumentTitle('Forgot password')
   const [email, setEmail] = useState('')
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

@@ -4,11 +4,13 @@ import DeleteAccountSection from '../components/account/DeleteAccountSection'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * /account: your account details and settings: change password, delete account.
  */
 export default function AccountPage() {
+  useDocumentTitle('Account')
   const { user, changePassword } = useAuth()
 
   const [current, setCurrent] = useState('')

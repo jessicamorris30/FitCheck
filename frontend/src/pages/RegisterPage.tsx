@@ -6,9 +6,11 @@ import Button from '../components/ui/Button'
 import FullPageSpinner from '../components/ui/FullPageSpinner'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /** Account creation. The backend logs the new user in straight away. */
 export default function RegisterPage() {
+  useDocumentTitle('Sign up')
   const { user, loading, register } = useAuth()
   const navigate = useNavigate()
 

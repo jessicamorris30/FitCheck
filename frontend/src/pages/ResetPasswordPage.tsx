@@ -5,12 +5,14 @@ import { parseApiError } from '../api/errors'
 import AuthCard from '../components/auth/AuthCard'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * /reset-password?token=…: the page the reset email links to. Choose a new password, then log in.
  * Public: the person opening the link isn't logged in (that's why they need it).
  */
 export default function ResetPasswordPage() {
+  useDocumentTitle('Reset password')
   const [params] = useSearchParams()
   const token = params.get('token')
 

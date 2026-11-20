@@ -6,12 +6,14 @@ import Button from '../components/ui/Button'
 import FullPageSpinner from '../components/ui/FullPageSpinner'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * Email + password sign-in. On success, go back to the page the user originally asked for
  * (ProtectedRoute stores it in `location.state.from`), or to the wardrobe.
  */
 export default function LoginPage() {
+  useDocumentTitle('Log in')
   const { user, loading, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

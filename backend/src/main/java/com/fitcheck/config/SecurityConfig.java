@@ -3,6 +3,9 @@ package com.fitcheck.config;
 import com.fitcheck.auth.JwtAuthenticationFilter;
 import com.fitcheck.auth.JwtService;
 import com.fitcheck.common.exception.ApiError;
+import com.fitcheck.security.RateLimitFilter;
+import com.fitcheck.security.RateLimiter;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.context.annotation.Bean;
@@ -38,11 +41,14 @@ import tools.jackson.databind.json.JsonMapper;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper, JwtService jwtService)
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper, JwtService jwtService,
+            RateLimiter rateLimiter, @Value("${fitcheck.rate-limit.enabled:true}") boolean rateLimitEnabled)
             throws Exception {
         http
                 // Check "Authorization: Bearer <jwt>" before Spring's own authentication filters.
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+                // And before even that: turn away floods of login/sign-up/reset attempts (429).
+                .addFilterBefore(new RateLimitFilter(rateLimiter, jsonMapper, rateLimitEnabled), JwtAuthenticationFilter.class)
                 .cors(Customizer.withDefaults()) // uses the CorsConfigurationSource bean from CorsConfig
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

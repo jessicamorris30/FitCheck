@@ -4,6 +4,7 @@ import { verifyEmail } from '../api/auth'
 import { parseApiError } from '../api/errors'
 import AuthCard from '../components/auth/AuthCard'
 import { useAuth } from '../hooks/useAuth'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 type Status = 'verifying' | 'success' | 'error'
 
@@ -15,6 +16,7 @@ type Status = 'verifying' | 'success' | 'error'
  * happens through a POST request rather than just by visiting a URL.
  */
 export default function VerifyEmailPage() {
+  useDocumentTitle('Confirm email')
   const [params] = useSearchParams()
   const token = params.get('token')
   const { user, updateUser } = useAuth()

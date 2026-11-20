@@ -5,6 +5,7 @@ import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.common.exception.ConflictException;
 import com.fitcheck.common.exception.FieldErrorException;
+import com.fitcheck.security.LoginAttemptService;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
@@ -32,18 +33,21 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokens;
     private final EmailVerificationService emailVerification;
+    private final LoginAttemptService loginAttempts;
 
     /** A real BCrypt hash of a random string; only used to equalize login timing (see login). */
     private final String dummyHash;
 
     // Spring sees this constructor and passes in the matching beans ("dependency injection").
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-            RefreshTokenService refreshTokens, EmailVerificationService emailVerification) {
+            RefreshTokenService refreshTokens, EmailVerificationService emailVerification,
+            LoginAttemptService loginAttempts) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokens = refreshTokens;
         this.emailVerification = emailVerification;
+        this.loginAttempts = loginAttempts;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -89,17 +93,23 @@ public class AuthService {
      */
     @Transactional
     public AuthSession login(LoginRequest request) {
-        User user = users.findByEmailIgnoreCase(normalizeEmail(request.email())).orElse(null);
+        String email = normalizeEmail(request.email());
+        loginAttempts.checkNotLocked(email); // too many wrong passwords for this email lately → 429
+
+        User user = users.findByEmailIgnoreCase(email).orElse(null);
 
         if (user == null) {
             // Still run one BCrypt check so "unknown email" takes as long as "wrong password".
             // Otherwise the response time alone would reveal whether an account exists.
             passwordEncoder.matches(request.password(), dummyHash);
+            loginAttempts.recordFailure(email);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAttempts.recordFailure(email);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
+        loginAttempts.recordSuccess(email);
         return startSession(user);
     }
 

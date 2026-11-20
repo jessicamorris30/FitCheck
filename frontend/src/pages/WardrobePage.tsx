@@ -8,6 +8,7 @@ import CategoryFilter from '../components/wardrobe/CategoryFilter'
 import UploadClothingModal from '../components/wardrobe/UploadClothingModal'
 import { CATEGORIES, isCategory } from '../lib/categories'
 import type { ClothingCategory, ClothingItem } from '../types'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
  * Browse your wardrobe: category tabs + a grid of your clothes.
@@ -16,6 +17,7 @@ import type { ClothingCategory, ClothingItem } from '../types'
  * so reloading the page, the back button and shared links all keep the filter.
  */
 export default function WardrobePage() {
+  useDocumentTitle('Wardrobe')
   const [searchParams, setSearchParams] = useSearchParams()
   const raw = searchParams.get('category')
   const category: ClothingCategory | null = isCategory(raw) ? raw : null

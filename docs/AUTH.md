@@ -78,6 +78,17 @@ Not enforced yet: unverified users can do everything. Later features (password r
 - **Forgot password** (`POST /auth/forgot-password`): **always `204`**, for every address, so the form can't reveal who has an account. Repeats within 60 s are silently ignored, again with no 429, which would also reveal that the account exists. If the account exists, a random token is created (only its SHA-256 hash is stored, in `password_reset_tokens`, V5) and the link `<FRONTEND_URL>/reset-password?token=…` is emailed after commit.
 - **Reset** (`POST /auth/reset-password`): the token must be unused and less than **1 hour** old. It sets the new password, marks the email confirmed (they read the inbox), uses up all other reset links, and revokes all sessions. The user then logs in.
 
+## Rate limits (step 5.4)
+
+Two layers, both returning **429** with a `Retry-After` header:
+
+| Layer | Where | Limits |
+|---|---|---|
+| **Per IP address** | `security/RateLimitFilter`, at the very start of the security chain, so no database or BCrypt work happens before it | `POST` login 10/min · register 10/h · forgot-password 5/15 min · reset-password 10/15 min · verify-email 20/15 min · refresh 60/min |
+| **Per account** | `security/LoginAttemptService`, inside `AuthService.login` | 5 wrong passwords for one email in 15 min locks that email's logins (even with the right password) until the window ends. A successful login clears the count. Counted for unknown emails too, so the lock reveals nothing. |
+
+Counts live in memory (`security/RateLimiter`, fixed windows), so they reset on restart and aren't shared between instances. Fine for one server; scaling out would need a shared store such as Redis. Behind Azure's proxy the client IP comes from `X-Forwarded-For`, which must be trusted in the production profile (step 5.6). Tests switch limits off (`fitcheck.rate-limit.enabled=false` in `src/test/resources/config/application.properties`); `RateLimitTest` switches them back on.
+
 ## Later hardening
 
 - Rate-limit `/auth/login` and `/auth/register`.
