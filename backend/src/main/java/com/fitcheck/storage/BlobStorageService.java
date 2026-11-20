@@ -3,6 +3,7 @@ package com.fitcheck.storage;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobHttpHeaders;
+import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
@@ -67,6 +68,41 @@ public class BlobStorageService {
     /** Deletes a blob. Deleting something that's already gone is not an error. */
     public void delete(String blobName) {
         container.getBlobClient(blobName).deleteIfExists();
+    }
+
+    /**
+     * Deletes every blob whose name starts with this prefix, e.g. {@code users/<id>/} = all of one
+     * user's photos and thumbnails, including any leftovers that no database row points to anymore.
+     *
+     * @return how many blobs were deleted
+     */
+    public int deleteAllWithPrefix(String prefix) {
+        if (prefix == null || prefix.isBlank() || !prefix.endsWith("/")) {
+            // Guard rail: an empty or partial prefix could match far more than intended.
+            throw new IllegalArgumentException("Prefix must be a non-empty folder path ending in '/'");
+        }
+        if (!container.exists()) {
+            return 0;
+        }
+        int deleted = 0;
+        for (var blob : container.listBlobs(new ListBlobsOptions().setPrefix(prefix), null)) {
+            if (container.getBlobClient(blob.getName()).deleteIfExists()) {
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+
+    /** How many blobs start with this prefix (for tests). */
+    public int countWithPrefix(String prefix) {
+        if (!container.exists()) {
+            return 0;
+        }
+        int count = 0;
+        for (var ignored : container.listBlobs(new ListBlobsOptions().setPrefix(prefix), null)) {
+            count++;
+        }
+        return count;
     }
 
     /** True if a blob with this name exists (mainly for tests and cleanup jobs). */

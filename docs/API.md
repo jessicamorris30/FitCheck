@@ -35,6 +35,7 @@ Errors use one shape (`ApiError`):
 | Method | Path | Response |
 |---|---|---|
 | GET | `/users/me` | `UserResponse` `{ id, email, emailVerified, createdAt }` |
+| DELETE | `/users/me` | Body `{ password }`. `204`: the account and everything in it are deleted (database rows by cascade; files under `users/<id>/` after commit) and the refresh cookie is cleared. `400` with `fieldErrors.password` if the password is wrong |
 | POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
 | DELETE | `/users/me` | `204` (deletes the account, all items, outfits and blobs) |
 

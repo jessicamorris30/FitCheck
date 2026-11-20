@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { parseApiError } from '../api/errors'
+import DeleteAccountSection from '../components/account/DeleteAccountSection'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 
 /**
- * /account: your account details and settings. Step 5.1: change password.
- * (Delete account arrives in step 5.3.)
+ * /account: your account details and settings: change password, delete account.
  */
 export default function AccountPage() {
   const { user, changePassword } = useAuth()
@@ -120,6 +120,8 @@ export default function AccountPage() {
           Change password
         </Button>
       </form>
+
+      <DeleteAccountSection />
     </section>
   )
 }

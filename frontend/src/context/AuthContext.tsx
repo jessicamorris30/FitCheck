@@ -15,6 +15,8 @@ export interface AuthContextValue {
   updateUser: (user: User) => void
   /** Change the password; this device stays logged in with the fresh session the server returns. */
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  /** Permanently delete the account, then forget the session locally. */
+  deleteAccount: (password: string) => Promise<void>
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -106,11 +108,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [startSession],
   )
 
+  const deleteAccount = useCallback(async (password: string) => {
+    await authApi.deleteAccount(password) // throws (and changes nothing) if the password is wrong
+    setAccessToken(null)
+    setUser(null)
+  }, [])
+
   // useMemo: only hand children a new object when something actually changed,
   // so components using useAuth() don't re-render for no reason.
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, updateUser, changePassword }),
-    [user, loading, login, register, logout, updateUser, changePassword],
+    () => ({ user, loading, login, register, logout, updateUser, changePassword, deleteAccount }),
+    [user, loading, login, register, logout, updateUser, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

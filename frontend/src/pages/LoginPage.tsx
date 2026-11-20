@@ -15,7 +15,9 @@ export default function LoginPage() {
   const { user, loading, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/wardrobe'
+  const navState = location.state as { from?: { pathname: string }; accountDeleted?: boolean } | null
+  const from = navState?.from?.pathname ?? '/wardrobe'
+  const accountDeleted = navState?.accountDeleted === true
 
   // "Controlled" inputs: React state is the source of truth for what's typed.
   const [email, setEmail] = useState('')
@@ -60,6 +62,11 @@ export default function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {accountDeleted && (
+          <p role="status" className="rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-700">
+            Your account and everything in it have been deleted. Sorry to see you go!
+          </p>
+        )}
         {error && (
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

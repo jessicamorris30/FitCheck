@@ -27,6 +27,11 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return data
 }
 
+/** Permanently deletes the logged-in account and everything in it. Needs the password. */
+export async function deleteAccount(password: string): Promise<void> {
+  await api.delete('/users/me', { data: { password } })
+}
+
 /** Asks for a reset link by email. Always succeeds, whether or not the email has an account. */
 export async function forgotPassword(email: string): Promise<void> {
   await api.post('/auth/forgot-password', { email })
