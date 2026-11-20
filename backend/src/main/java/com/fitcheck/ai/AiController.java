@@ -26,10 +26,12 @@ public class AiController {
 
     private final StylistClient stylist;
     private final OutfitSuggestionService suggestions;
+    private final AiUsageService usageService;
 
-    public AiController(StylistClient stylist, OutfitSuggestionService suggestions) {
+    public AiController(StylistClient stylist, OutfitSuggestionService suggestions, AiUsageService usageService) {
         this.stylist = stylist;
         this.suggestions = suggestions;
+        this.usageService = usageService;
     }
 
     /** Whether the AI stylist is switched on, and with which model. Free: it doesn't call Claude. */
@@ -43,9 +45,19 @@ public class AiController {
     }
 
     /**
+     * GET /api/ai/usage → {"used": 3, "limit": 20, "remaining": 17, "resetsAt": "...T00:00:00Z"}
+     * For the "n of 20 left today" hint in the UI. Free: it doesn't call Claude.
+     */
+    @GetMapping("/usage")
+    public AiUsageService.UsageSummary usage(@AuthenticationPrincipal AuthenticatedUser me) {
+        return usageService.summary(me.id());
+    }
+
+    /**
      * POST /api/ai/outfit-suggestions {"prompt": "rainy-day office look"}
      * → 200 {"suggestions": [{"title", "reasoning", "items": [...]}]}  (takes ~10-40 s)
-     * 400 empty prompt or empty wardrobe, 422 request declined, 503 AI unavailable.
+     * 400 empty prompt or empty wardrobe, 403 email not confirmed, 429 daily limit reached,
+     * 422 request declined, 503 AI unavailable (that request isn't counted).
      */
     @PostMapping(value = "/outfit-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
     public SuggestionsResponse suggest(@AuthenticationPrincipal AuthenticatedUser me,

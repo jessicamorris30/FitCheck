@@ -70,6 +70,12 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.valueOf(422), "The stylist couldn't help with that request. Try describing it differently.");
     }
 
+    /** Logged in, but not allowed (yet), e.g. AI before confirming the email → 403. */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(ForbiddenException ex) {
+        return respond(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     /** Wrong credentials (e.g. bad login) → 401. */
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException ex) {

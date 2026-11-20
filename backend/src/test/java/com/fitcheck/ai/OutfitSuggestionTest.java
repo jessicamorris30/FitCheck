@@ -91,7 +91,9 @@ class OutfitSuggestionTest {
         // The fake is ONE shared object for the whole test class: reset what earlier tests left behind.
         fake.lastRequest = null;
         fake.answer = req -> new SuggestionResult(List.of());
-        alice = users.saveAndFlush(new User("alice-" + UUID.randomUUID() + "@example.com", "hash"));
+        User newAlice = new User("alice-" + UUID.randomUUID() + "@example.com", "hash");
+        newAlice.markEmailVerified(java.time.Instant.now()); // the AI stylist requires a confirmed email (step 4.5)
+        alice = users.saveAndFlush(newAlice);
         User bob = users.saveAndFlush(new User("bob-" + UUID.randomUUID() + "@example.com", "hash"));
         tee = item(alice, "White tee", ClothingCategory.TOP, true);
         jeans = item(alice, "Blue jeans", ClothingCategory.BOTTOM, true);

@@ -47,14 +47,17 @@ public class OutfitSuggestionService {
     private final ThumbnailCache thumbnails;
     private final ThumbnailService imageResizer;
     private final StylistClient stylist;
+    private final AiUsageService usageService;
 
     public OutfitSuggestionService(ClothingItemRepository clothing, BlobStorageService storage,
-            ThumbnailCache thumbnails, ThumbnailService imageResizer, StylistClient stylist) {
+            ThumbnailCache thumbnails, ThumbnailService imageResizer, StylistClient stylist,
+            AiUsageService usageService) {
         this.clothing = clothing;
         this.storage = storage;
         this.thumbnails = thumbnails;
         this.imageResizer = imageResizer;
         this.stylist = stylist;
+        this.usageService = usageService;
     }
 
     /** Largest side of an inspiration photo sent to Claude. Bigger costs more and adds nothing. */
@@ -91,25 +94,35 @@ public class OutfitSuggestionService {
             throw new BadRequestException("Add some clothes to your wardrobe first, then ask the stylist.");
         }
 
-        // 2. Ask Claude (the slow part).
-        List<WardrobeEntry> wardrobe = items.stream().map(this::toEntry).toList();
-        SuggestionResult result = stylist.suggest(
-                new SuggestionRequest(wardrobe, hasPrompt ? prompt.trim() : null, inspirationJpeg));
+        // 2. Guard rails: confirmed email + daily limit. This comes AFTER the free checks above,
+        //    so a typo or a bad photo never uses up one of the user's daily requests.
+        UUID usageId = usageService.checkAndRecord(ownerId);
 
-        // 3. Never trust the answer blindly: keep only ids that really are this user's items.
-        //    (Claude only sees this user's items, but checking costs nothing and protects against
-        //    any mistake, now or after future changes.)
-        Map<UUID, ClothingItem> owned = items.stream()
-                .collect(Collectors.toMap(ClothingItem::getId, Function.identity()));
+        try {
+            // 3. Ask Claude (the slow part).
+            List<WardrobeEntry> wardrobe = items.stream().map(this::toEntry).toList();
+            SuggestionResult result = stylist.suggest(
+                    new SuggestionRequest(wardrobe, hasPrompt ? prompt.trim() : null, inspirationJpeg));
 
-        List<SuggestionDto> suggestions = result.suggestions().stream()
-                .map(s -> toDto(s, owned))
-                .filter(Objects::nonNull)
-                .toList();
-        if (suggestions.isEmpty()) {
-            throw new AiUnavailableException("Claude's answer contained no usable outfits");
+            // 4. Never trust the answer blindly: keep only ids that really are this user's items.
+            //    (Claude only sees this user's items, but checking costs nothing and protects against
+            //    any mistake, now or after future changes.)
+            Map<UUID, ClothingItem> owned = items.stream()
+                    .collect(Collectors.toMap(ClothingItem::getId, Function.identity()));
+
+            List<SuggestionDto> suggestions = result.suggestions().stream()
+                    .map(s -> toDto(s, owned))
+                    .filter(Objects::nonNull)
+                    .toList();
+            if (suggestions.isEmpty()) {
+                throw new AiUnavailableException("Claude's answer contained no usable outfits");
+            }
+            return new SuggestionsResponse(suggestions);
+        } catch (AiUnavailableException e) {
+            // Our side failed (outage, unusable answer): give the user their request back.
+            usageService.refund(usageId);
+            throw e;
         }
-        return new SuggestionsResponse(suggestions);
     }
 
     /**
