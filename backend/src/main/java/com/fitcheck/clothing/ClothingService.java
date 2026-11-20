@@ -17,10 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Wardrobe business logic: creating, listing and viewing items. Every method takes the owner's
+ * Wardrobe business logic: create, list, view, edit and delete items. Every method takes the owner's
  * id (from the access token) and only ever touches that owner's items.
  */
 @Service
@@ -93,8 +95,56 @@ public class ClothingService {
      */
     @Transactional(readOnly = true)
     public ClothingItemResponse get(UUID ownerId, UUID itemId) {
+        return toResponse(findOwned(ownerId, itemId));
+    }
+
+    /**
+     * Changes an item's details (name, category, color, tags). The photo stays the same.
+     *
+     * <p>No explicit save() needed: the item was loaded inside this transaction, so Hibernate
+     * notices the changes ("dirty checking") and writes an UPDATE when the transaction commits.
+     *
+     * @throws NotFoundException if there's no such item owned by this user
+     */
+    @Transactional
+    public ClothingItemResponse update(UUID ownerId, UUID itemId, ClothingItemRequest request) {
+        ClothingItem item = findOwned(ownerId, itemId);
+        item.updateDetails(request.name(), request.category(), request.color(), request.tags());
+        return toResponse(item);
+    }
+
+    /**
+     * Deletes an item and its photo.
+     *
+     * <p>Order matters again (two systems, no shared transaction). The row is deleted now, but the
+     * photo only after the database has committed. If anything fails before that, the row is
+     * rolled back and its photo is still there, so you never end up with an item whose photo is
+     * gone. The worst case is the reverse: a leftover photo nobody points to, which is harmless.
+     *
+     * <p>Outfits that used this item lose it automatically (ON DELETE CASCADE on outfit_items).
+     *
+     * @throws NotFoundException if there's no such item owned by this user
+     */
+    @Transactional
+    public void delete(UUID ownerId, UUID itemId) {
+        ClothingItem item = findOwned(ownerId, itemId);
+        String blobName = item.getBlobName();
+        items.delete(item);
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    storage.delete(blobName);
+                } catch (RuntimeException e) {
+                    log.warn("Item deleted but its photo {} could not be removed", blobName, e);
+                }
+            }
+        });
+    }
+
+    private ClothingItem findOwned(UUID ownerId, UUID itemId) {
         return items.findByIdAndOwner_Id(itemId, ownerId)
-                .map(this::toResponse)
                 .orElseThrow(() -> new NotFoundException("Clothing item not found"));
     }
 

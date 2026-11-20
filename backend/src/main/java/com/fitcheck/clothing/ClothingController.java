@@ -9,9 +9,12 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -67,5 +70,24 @@ public class ClothingController {
     @GetMapping("/{id}")
     public ClothingItemResponse get(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable UUID id) {
         return clothingService.get(me.id(), id);
+    }
+
+    /**
+     * PUT /api/clothing/{id} with JSON {"name","category","color","tags"} → the updated item.
+     * Replaces all editable details (fields left out become empty). 400 invalid, 404 not yours.
+     */
+    @PutMapping("/{id}")
+    public ClothingItemResponse update(
+            @AuthenticationPrincipal AuthenticatedUser me,
+            @PathVariable UUID id,
+            @Valid @RequestBody ClothingItemRequest request) {
+        return clothingService.update(me.id(), id, request);
+    }
+
+    /** DELETE /api/clothing/{id} → 204, item and photo removed. 404 if it isn't yours. */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable UUID id) {
+        clothingService.delete(me.id(), id);
     }
 }
