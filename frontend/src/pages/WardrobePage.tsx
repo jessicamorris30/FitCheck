@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { listClothing } from '../api/clothing'
 import { parseApiError } from '../api/errors'
+import Button from '../components/ui/Button'
 import ClothingGrid, { ClothingGridSkeleton } from '../components/wardrobe/ClothingGrid'
 import CategoryFilter from '../components/wardrobe/CategoryFilter'
+import UploadClothingModal from '../components/wardrobe/UploadClothingModal'
 import { CATEGORIES, isCategory } from '../lib/categories'
 import type { ClothingCategory, ClothingItem } from '../types'
 
@@ -45,6 +47,18 @@ export default function WardrobePage() {
     }
   }, [category, requestKey])
 
+  const [uploadOpen, setUploadOpen] = useState(false)
+
+  // Show a freshly uploaded item immediately, at the top (newest first), without re-fetching.
+  // If a different category tab is selected, it doesn't belong in the current view.
+  const handleUploaded = useCallback(
+    (item: ClothingItem) => {
+      if (category && item.category !== category) return
+      setResult((prev) => (prev ? { ...prev, items: [item, ...prev.items] } : prev))
+    },
+    [category],
+  )
+
   const selectCategory = useCallback(
     (next: ClothingCategory | null) => {
       setSearchParams(next ? { category: next } : {})
@@ -66,8 +80,11 @@ export default function WardrobePage() {
             </p>
           )}
         </div>
-        {/* The "Add item" button arrives with the upload modal in step 2.7. */}
+        <Button onClick={() => setUploadOpen(true)}>+ Add item</Button>
       </header>
+
+      {/* Only rendered while open, so each opening starts with an empty form. */}
+      {uploadOpen && <UploadClothingModal onClose={() => setUploadOpen(false)} onUploaded={handleUploaded} />}
 
       <CategoryFilter value={category} onChange={selectCategory} />
 
@@ -82,7 +99,10 @@ export default function WardrobePage() {
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-500">
-          {category ? `No ${categoryName} yet.` : 'Your wardrobe is empty. Upload your first piece of clothing to get started.'}
+          <p>{category ? `No ${categoryName} yet.` : 'Your wardrobe is empty. Upload your first piece of clothing to get started.'}</p>
+          <button onClick={() => setUploadOpen(true)} className="mt-3 font-medium text-gray-900 underline">
+            Add an item
+          </button>
         </div>
       ) : (
         <ClothingGrid items={items} />
