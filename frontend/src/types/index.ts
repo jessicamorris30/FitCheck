@@ -56,21 +56,35 @@ export interface Outfit {
   updatedAt: string
 }
 
+// ---- AI stylist (/api/ai) ----
+
 export interface OutfitSuggestionRequest {
-  /** Text describing the desired aesthetic, e.g. "90s grunge, cozy". */
+  /** What the user is going for, e.g. "90s grunge, cozy". Optional if there's a photo. */
   prompt?: string
-  /** Optional inspiration image (sent as multipart form data). */
+  /** Optional inspiration photo of a look the user likes. */
   image?: File
-  /** Optional: restrict suggestions to these items. */
-  itemIds?: string[]
 }
 
+/** One outfit suggested by the AI, with its full clothing items in order. */
 export interface OutfitSuggestion {
-  itemIds: string[]
   title: string
   reasoning: string
+  items: ClothingItem[]
 }
 
 export interface OutfitSuggestionResponse {
   suggestions: OutfitSuggestion[]
+}
+
+export interface AiStatus {
+  configured: boolean
+  model: string
+}
+
+/** "n of limit left today", resets at midnight UTC. */
+export interface AiUsage {
+  used: number
+  limit: number
+  remaining: number
+  resetsAt: string
 }

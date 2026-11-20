@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { getAiStatus } from '../api/ai'
 import { parseApiError } from '../api/errors'
+import AiPromptPanel from '../components/plan/AiPromptPanel'
 import { createOutfit, MAX_OUTFIT_ITEMS, updateOutfit } from '../api/outfits'
 import OutfitCanvas from '../components/plan/OutfitCanvas'
 import OutfitItemPicker from '../components/plan/OutfitItemPicker'
@@ -42,6 +44,19 @@ export default function PlanPage({ existing }: PlanPageProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  // The AI stylist: only offered when the server has it switched on (an API key is set).
+  const [aiAvailable, setAiAvailable] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    getAiStatus()
+      .then((s) => !cancelled && setAiAvailable(s.configured))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const selectedIds = useMemo(() => new Set(items.map((i) => i.id)), [items])
   const full = items.length >= MAX_OUTFIT_ITEMS
@@ -103,11 +118,23 @@ export default function PlanPage({ existing }: PlanPageProps) {
     return (
       // pb-28: leave room so the last row of clothes isn't hidden behind the bottom bar.
       <section className="flex flex-col gap-6 pb-28">
-        <header>
-          <p className="text-sm font-medium text-gray-500">{title ? `${title} · ` : ''}Step 1 of 2</p>
-          <h1 className="text-2xl font-semibold">Choose clothes</h1>
-          <p className="text-sm text-gray-500">Click items to add them to your outfit. Click again to remove.</p>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-gray-500">{title ? `${title} · ` : ''}Step 1 of 2</p>
+            <h1 className="text-2xl font-semibold">Choose clothes</h1>
+            <p className="text-sm text-gray-500">Click items to add them to your outfit. Click again to remove.</p>
+          </div>
+          {aiAvailable && !aiOpen && (
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-2 font-medium text-violet-900 hover:bg-violet-100"
+            >
+              ✨ Ask the AI stylist
+            </button>
+          )}
         </header>
+        {aiOpen && <AiPromptPanel onClose={() => setAiOpen(false)} />}
         <OutfitItemPicker selectedIds={selectedIds} onToggle={toggle} full={full} />
         <SelectionBar items={items} onClear={() => setItems([])} onNext={() => goTo('details')} />
       </section>
