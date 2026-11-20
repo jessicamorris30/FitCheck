@@ -49,6 +49,13 @@ export async function uploadClothingItem(
   return data
 }
 
+/** Replaces an item's details (name, category, color, tags). The photo stays the same. */
+export async function updateClothingItem(id: string, details: ClothingDetails): Promise<ClothingItem> {
+  const { data } = await api.put<ClothingItem>(`/clothing/${id}`, details)
+  return data
+}
+
+/** Deletes the item and its photo. */
 export async function deleteClothingItem(id: string): Promise<void> {
   await api.delete(`/clothing/${id}`)
 }

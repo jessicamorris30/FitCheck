@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react'
 import { uploadClothingItem } from '../../api/clothing'
 import { parseApiError } from '../../api/errors'
-import { CATEGORIES, categoryLabel, isCategory } from '../../lib/categories'
-import type { ClothingCategory, ClothingItem } from '../../types'
+import { EMPTY_DETAILS, toClothingDetails, type DetailsFormValues } from '../../lib/clothingForm'
+import type { ClothingItem } from '../../types'
 import Button from '../ui/Button'
-import TextField from '../ui/TextField'
+import ClothingDetailsFields from './ClothingDetailsFields'
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_BYTES = 10 * 1024 * 1024 // must match the backend's 10 MB limit
@@ -28,10 +28,7 @@ export default function UploadClothingModal({ onClose, onUploaded }: UploadCloth
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState<ClothingCategory | ''>('')
-  const [color, setColor] = useState('')
-  const [tags, setTags] = useState('')
+  const [details, setDetails] = useState<DetailsFormValues>(EMPTY_DETAILS)
 
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -72,7 +69,7 @@ export default function UploadClothingModal({ onClose, onUploaded }: UploadCloth
     setFile(picked)
 
     // Suggest a name from the file name: "blue-jeans_2.jpg" → "Blue jeans 2".
-    if (picked && !name) setName(nameFromFile(picked.name))
+    if (picked && !details.name) setDetails((d) => ({ ...d, name: nameFromFile(picked.name) }))
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -85,17 +82,7 @@ export default function UploadClothingModal({ onClose, onUploaded }: UploadCloth
     setFieldErrors({})
     setProgress(0)
     try {
-      const item = await uploadClothingItem(
-        file,
-        {
-          name,
-          category: category || null,
-          color,
-          // "casual, Summer ,  work" → ["casual", "Summer", "work"] (the backend lowercases them)
-          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-        },
-        setProgress,
-      )
+      const item = await uploadClothingItem(file, toClothingDetails(details), setProgress)
       onUploaded(item)
       onClose()
     } catch (err) {
@@ -110,9 +97,6 @@ export default function UploadClothingModal({ onClose, onUploaded }: UploadCloth
   function handleBackdropClick(e: MouseEvent<HTMLDialogElement>) {
     if (e.target === dialogRef.current && !uploading) onClose()
   }
-
-  // Any tag-specific error from the backend ("tags" or "tags[2]") is shown under the tags field.
-  const tagsError = Object.entries(fieldErrors).find(([key]) => key.startsWith('tags'))?.[1]
 
   return (
     <dialog
@@ -173,61 +157,7 @@ export default function UploadClothingModal({ onClose, onUploaded }: UploadCloth
             {preview && !uploading && <p className="text-center text-xs text-gray-500">Click the photo to change it</p>}
           </div>
 
-          {/* Details */}
-          <div className="flex flex-col gap-4">
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              error={fieldErrors.name}
-              placeholder="e.g. Blue jeans"
-              maxLength={120}
-              disabled={uploading}
-            />
-
-            <div className="flex flex-col gap-1">
-              <label htmlFor="upload-category" className="text-sm font-medium text-gray-700">
-                Category
-              </label>
-              <select
-                id="upload-category"
-                value={category}
-                onChange={(e) => setCategory(isCategory(e.target.value) ? e.target.value : '')}
-                disabled={uploading}
-                className={`rounded-lg border bg-white px-3 py-2 text-gray-900 ${
-                  fieldErrors.category ? 'border-red-400' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Choose…</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {categoryLabel(c.value)}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors.category && <p className="text-sm text-red-600">{fieldErrors.category}</p>}
-            </div>
-
-            <TextField
-              label="Color (optional)"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              error={fieldErrors.color}
-              placeholder="e.g. navy"
-              maxLength={40}
-              disabled={uploading}
-            />
-
-            <TextField
-              label="Tags (optional)"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              error={tagsError}
-              placeholder="casual, summer, work"
-              disabled={uploading}
-            />
-            <p className="-mt-3 text-xs text-gray-500">Separate tags with commas.</p>
-          </div>
+          <ClothingDetailsFields values={details} onChange={setDetails} errors={fieldErrors} disabled={uploading} />
         </div>
 
         <footer className="flex flex-col gap-3">

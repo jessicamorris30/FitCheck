@@ -14,10 +14,11 @@
 - [x] Tests for token rotation and reuse detection
 - [x] Email verification on sign-up (Mailpit locally, SMTP provider in production)
 
-## Phase 2: Wardrobe
-- [ ] `AzureStorageConfig`, `BlobStorageService` (upload, delete, SAS URLs)
-- [ ] `ClothingItem` entity, service and controller (multipart upload, list/filter, update, delete)
-- [ ] Frontend: WardrobePage, ClothingGrid/Card, CategoryFilter, UploadClothingModal, ClothingDetailPage
+## Phase 2: Wardrobe ✅
+- [x] `AzureStorageConfig`, `BlobStorageService` (upload, delete, SAS URLs)
+- [x] `ClothingItem` entity, service and controller (multipart upload, list/filter, update, delete)
+- [x] Frontend: WardrobePage, ClothingGrid/Card, CategoryFilter, UploadClothingModal, ClothingDetailPage
+- [ ] Later: thumbnails, HEIC (iPhone) photos, tag search, pagination for large wardrobes
 
 ## Phase 3: Plan mode (manual)
 - [ ] `Outfit` / `OutfitItem` entities, service and controller

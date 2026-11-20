@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { categoryLabel } from '../../lib/categories'
 import type { ClothingItem } from '../../types'
 
@@ -8,10 +8,14 @@ export default function ClothingCard({ item }: { item: ClothingItem }) {
   // If the image fails (e.g. its signed link expired after the page sat open for a long time),
   // show a neutral placeholder instead of the browser's broken-image icon.
   const [broken, setBroken] = useState(false)
+  // Remember where we came from (e.g. /wardrobe?category=SHOES) so "Back" on the detail page
+  // returns to the same filtered view.
+  const location = useLocation()
 
   return (
     <Link
       to={`/wardrobe/${item.id}`}
+      state={{ from: location.pathname + location.search }}
       className="group block overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:shadow-md"
     >
       <div className="aspect-[3/4] bg-gray-100">
