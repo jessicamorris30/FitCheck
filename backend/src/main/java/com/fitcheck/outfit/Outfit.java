@@ -108,6 +108,15 @@ public class Outfit implements Persistable<UUID> {
         this.notes = notes == null || notes.isBlank() ? null : notes.trim();
     }
 
+    /**
+     * Bumps updatedAt. @UpdateTimestamp only fires when a column of the outfits row itself
+     * changes; if only the items changed (rows in outfit_items), the outfit would otherwise keep
+     * its old updatedAt and not move to the top of "recently changed".
+     */
+    public void markChanged() {
+        this.updatedAt = Instant.now();
+    }
+
     public void setAiPrompt(String aiPrompt) {
         this.aiPrompt = aiPrompt;
     }

@@ -65,6 +65,36 @@ public class OutfitService {
         return toResponse(findOwned(ownerId, outfitId));
     }
 
+    /**
+     * Replaces an outfit's name, notes and items (same body as create).
+     * Items are diffed by {@link Outfit#replaceItems}, so reordering is cheap and safe.
+     *
+     * @throws NotFoundException   if there's no such outfit owned by this user
+     * @throws BadRequestException if any item id isn't one of the owner's items
+     */
+    @Transactional
+    public OutfitResponse update(UUID ownerId, UUID outfitId, OutfitRequest request) {
+        Outfit outfit = findOwned(ownerId, outfitId);
+        List<ClothingItem> items = loadOwnedItemsInOrder(ownerId, request.itemIds());
+
+        outfit.rename(request.name(), request.notes());
+        outfit.replaceItems(items);
+        outfit.markChanged();
+        outfits.flush(); // write now so the response shows the final updatedAt
+        return toResponse(outfit);
+    }
+
+    /**
+     * Deletes an outfit. Its rows in outfit_items go with it (cascade); the clothing items
+     * themselves are untouched.
+     *
+     * @throws NotFoundException if there's no such outfit owned by this user
+     */
+    @Transactional
+    public void delete(UUID ownerId, UUID outfitId) {
+        outfits.delete(findOwned(ownerId, outfitId));
+    }
+
     Outfit findOwned(UUID ownerId, UUID outfitId) {
         return outfits.findByIdAndOwner_Id(outfitId, ownerId)
                 .orElseThrow(() -> new NotFoundException("Outfit not found"));
