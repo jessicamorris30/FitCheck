@@ -8,12 +8,13 @@ interface OutfitCanvasProps {
   onRemove: (itemId: string) => void
   /** Move the item at `index` one place earlier (-1) or later (+1). */
   onMove: (index: number, direction: -1 | 1) => void
-  onClear: () => void
+  /** Optional "Clear" link in the header. */
+  onClear?: () => void
 }
 
 /**
- * The outfit you're putting together: your chosen items in order, each with ← → to reorder
- * and × to remove. It only displays the list; PlanPage owns it and decides what changes do.
+ * Step 2 of planning: your chosen items in order, each with ← → to reorder and × to remove.
+ * It only displays the list; PlanPage owns it and decides what changes do.
  */
 export default function OutfitCanvas({ items, onRemove, onMove, onClear }: OutfitCanvasProps) {
   return (
@@ -24,7 +25,7 @@ export default function OutfitCanvas({ items, onRemove, onMove, onClear }: Outfi
           <span className={items.length >= MAX_OUTFIT_ITEMS ? 'font-medium text-amber-700' : 'text-gray-500'}>
             {items.length} / {MAX_OUTFIT_ITEMS}
           </span>
-          {items.length > 0 && (
+          {onClear && items.length > 0 && (
             <button type="button" onClick={onClear} className="text-gray-500 underline hover:text-gray-900">
               Clear
             </button>
@@ -34,10 +35,10 @@ export default function OutfitCanvas({ items, onRemove, onMove, onClear }: Outfi
 
       {items.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
-          Click items from your wardrobe to start building an outfit.
+          No items left. Go back and choose some clothes.
         </div>
       ) : (
-        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {items.map((item, index) => (
             <li key={item.id} className="relative overflow-hidden rounded-xl border border-gray-200 bg-white">
               <img src={item.imageUrl} alt={item.name} className="aspect-[3/4] w-full object-cover" />

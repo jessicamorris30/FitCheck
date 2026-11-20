@@ -40,11 +40,10 @@ export default function OutfitItemPicker({ selectedIds, onToggle, full }: Outfit
 
   return (
     <section className="flex flex-col gap-4" aria-label="Your wardrobe">
-      <h2 className="text-lg font-semibold">Your wardrobe</h2>
       <CategoryFilter value={category} onChange={setCategory} />
 
       {loading ? (
-        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4" aria-busy="true">
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6" aria-busy="true">
           {Array.from({ length: 8 }, (_, i) => (
             <li key={i} className="aspect-[3/4] animate-pulse rounded-lg bg-gray-100" />
           ))}
@@ -63,7 +62,7 @@ export default function OutfitItemPicker({ selectedIds, onToggle, full }: Outfit
           )}
         </p>
       ) : (
-        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {result?.items.map((item) => {
             const selected = selectedIds.has(item.id)
             const blocked = full && !selected

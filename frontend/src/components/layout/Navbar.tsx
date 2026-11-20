@@ -23,6 +23,9 @@ export default function Navbar() {
       <NavLink to="/plan" className={link}>
         Plan
       </NavLink>
+      <NavLink to="/outfits" className={link}>
+        Outfits
+      </NavLink>
 
       <div className="ml-auto flex items-center gap-4 text-sm">
         {user && <span className="text-gray-500">{user.email}</span>}
