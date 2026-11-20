@@ -1,5 +1,6 @@
 package com.fitcheck.common.exception;
 
+import com.fitcheck.stylist.AiUnavailableException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -53,6 +54,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ApiError> handleTooManyRequests(TooManyRequestsException ex) {
         return respond(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+    }
+
+    /** AI stylist not configured, or the Claude API is unreachable or failed → 503. Details go to the log. */
+    @ExceptionHandler(AiUnavailableException.class)
+    public ResponseEntity<ApiError> handleAiUnavailable(AiUnavailableException ex) {
+        log.warn("AI unavailable: {}", ex.getMessage());
+        return respond(HttpStatus.SERVICE_UNAVAILABLE, "The AI stylist is unavailable right now. Please try again later.");
     }
 
     /** Wrong credentials (e.g. bad login) → 401. */
