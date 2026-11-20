@@ -69,6 +69,10 @@ public class ClothingItem {
     @Column(name = "blob_name", nullable = false, unique = true, updatable = false)
     private String blobName;
 
+    /** A small JPEG copy of the photo, e.g. {@code users/<ownerId>/<uuid>_thumb.jpg}. Null until made. */
+    @Column(name = "thumbnail_blob_name", unique = true)
+    private String thumbnailBlobName;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -138,6 +142,14 @@ public class ClothingItem {
 
     public String getBlobName() {
         return blobName;
+    }
+
+    public String getThumbnailBlobName() {
+        return thumbnailBlobName;
+    }
+
+    public void setThumbnailBlobName(String thumbnailBlobName) {
+        this.thumbnailBlobName = thumbnailBlobName;
     }
 
     public Instant getCreatedAt() {

@@ -11,7 +11,7 @@ export default function OutfitThumbnail({ items }: { items: ClothingItem[] }) {
       {Array.from({ length: 4 }, (_, i) => {
         const item = firstFour[i]
         return item ? (
-          <img key={item.id} src={item.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <img key={item.id} src={item.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
         ) : (
           <div key={`empty-${i}`} className="bg-gray-100" />
         )

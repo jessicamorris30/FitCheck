@@ -22,7 +22,7 @@ export default function SelectionBar({ items, onClear, onNext }: SelectionBarPro
           ) : (
             items.map((item) => (
               <li key={item.id} className="shrink-0">
-                <img src={item.imageUrl} alt={item.name} title={item.name} className="h-12 w-9 rounded object-cover" />
+                <img src={item.thumbnailUrl} alt={item.name} title={item.name} className="h-12 w-9 rounded object-cover" />
               </li>
             ))
           )}

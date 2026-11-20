@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fitcheck.auth.JwtService;
 import com.fitcheck.storage.BlobStorageService;
+import com.fitcheck.storage.TestImages;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
 import com.jayway.jsonpath.JsonPath;
@@ -36,8 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class ClothingUploadTest {
 
-    /** Just enough of a JPEG to pass the "first bytes" check. */
-    private static final byte[] FAKE_JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 1, 2, 3, 4, 5, 6, 7, 8};
+    /** A real, decodable 800×600 JPEG (thumbnails need actual images now). */
+    private static final byte[] FAKE_JPEG = TestImages.jpeg(800, 600);
 
     @Autowired
     private MockMvc mvc;
@@ -65,7 +66,12 @@ class ClothingUploadTest {
 
     @AfterEach
     void cleanUp() {
-        items.findAllByOwner_IdOrderByCreatedAtDesc(user.getId()).forEach(i -> storage.delete(i.getBlobName()));
+        items.findAllByOwner_IdOrderByCreatedAtDesc(user.getId()).forEach(i -> {
+            storage.delete(i.getBlobName());
+            if (i.getThumbnailBlobName() != null) {
+                storage.delete(i.getThumbnailBlobName());
+            }
+        });
     }
 
     @Test
@@ -92,6 +98,24 @@ class ClothingUploadTest {
         assertThat(photo.statusCode()).isEqualTo(200);
         assertThat(photo.body()).isEqualTo(FAKE_JPEG);
         assertThat(photo.headers().firstValue("Content-Type")).contains("image/jpeg");
+
+        // A thumbnail was made too: a separate, smaller JPEG with its own link.
+        assertThat(saved.getThumbnailBlobName()).endsWith("_thumb.jpg");
+        String thumbnailUrl = JsonPath.read(body, "$.thumbnailUrl");
+        assertThat(thumbnailUrl).isNotEqualTo(imageUrl);
+        HttpResponse<byte[]> thumb = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create(thumbnailUrl)).build(), HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(thumb.statusCode()).isEqualTo(200);
+        assertThat(TestImages.decode(thumb.body()).getWidth()).isEqualTo(320);
+    }
+
+    @Test
+    void rejectsFileThatStartsLikeAJpegButIsBroken() throws Exception {
+        byte[] broken = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 1, 2, 3, 4, 5, 6, 7, 8};
+        upload(image(broken), metadata("{\"name\":\"Shirt\",\"category\":\"TOP\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("We couldn't read that image. Please try a different photo."));
+        assertThat(items.countByOwner_Id(user.getId())).isZero();
     }
 
     @Test

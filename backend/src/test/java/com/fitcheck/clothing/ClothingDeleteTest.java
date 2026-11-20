@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fitcheck.auth.JwtService;
 import com.fitcheck.storage.BlobStorageService;
+import com.fitcheck.storage.TestImages;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
 import java.io.ByteArrayInputStream;
@@ -45,6 +46,9 @@ class ClothingDeleteTest {
     @Autowired
     private JwtService jwt;
 
+    @Autowired
+    private ClothingService clothingService;
+
     private User user;
     private ClothingItem item;
 
@@ -52,20 +56,26 @@ class ClothingDeleteTest {
     void setUp() {
         user = users.save(new User("delete-" + UUID.randomUUID() + "@example.com", "hash"));
         String blobName = "users/" + user.getId() + "/" + UUID.randomUUID() + ".jpg";
-        byte[] photo = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 1, 2, 3};
+        byte[] photo = TestImages.jpeg(640, 480);
         storage.upload(blobName, new ByteArrayInputStream(photo), photo.length, "image/jpeg");
-        item = items.save(new ClothingItem(user, "Old sweater", ClothingCategory.TOP, null, List.of(), blobName));
+        String thumbName = blobName.replace(".jpg", "_thumb.jpg");
+        storage.upload(thumbName, TestImages.jpeg(320, 240), "image/jpeg");
+        ClothingItem toSave = new ClothingItem(user, "Old sweater", ClothingCategory.TOP, null, List.of(), blobName);
+        toSave.setThumbnailBlobName(thumbName);
+        item = items.save(toSave);
     }
 
     @AfterEach
     void cleanUp() {
         storage.delete(item.getBlobName());
+        storage.delete(item.getThumbnailBlobName());
         users.deleteById(user.getId()); // ON DELETE CASCADE removes any remaining items
     }
 
     @Test
-    void deletesTheRowAndThePhoto() throws Exception {
+    void deletesTheRowThePhotoAndTheThumbnail() throws Exception {
         assertThat(storage.exists(item.getBlobName())).isTrue();
+        assertThat(storage.exists(item.getThumbnailBlobName())).isTrue();
 
         mvc.perform(delete("/api/clothing/" + item.getId())
                         .header("Authorization", "Bearer " + jwt.createAccessToken(user.getId(), user.getEmail())))
@@ -73,6 +83,26 @@ class ClothingDeleteTest {
 
         assertThat(items.findById(item.getId())).isEmpty();
         assertThat(storage.exists(item.getBlobName())).isFalse();
+        assertThat(storage.exists(item.getThumbnailBlobName())).isFalse();
+    }
+
+    @Test
+    void olderItemWithoutThumbnailGetsOne() {
+        // An item uploaded before thumbnails existed: a photo, but no thumbnail.
+        String oldBlob = "users/" + user.getId() + "/" + UUID.randomUUID() + ".png";
+        storage.upload(oldBlob, TestImages.png(900, 1200), "image/png");
+        ClothingItem old = items.save(new ClothingItem(user, "Vintage coat", ClothingCategory.OUTERWEAR, null, List.of(), oldBlob));
+        assertThat(items.findIdsWithoutThumbnail()).contains(old.getId());
+
+        clothingService.createMissingThumbnail(old.getId());
+
+        ClothingItem reloaded = items.findById(old.getId()).orElseThrow();
+        assertThat(reloaded.getThumbnailBlobName()).endsWith("_thumb.jpg");
+        assertThat(TestImages.decode(storage.download(reloaded.getThumbnailBlobName())).getHeight()).isEqualTo(320);
+        assertThat(items.findIdsWithoutThumbnail()).doesNotContain(old.getId());
+
+        storage.delete(oldBlob);
+        storage.delete(reloaded.getThumbnailBlobName());
     }
 
     @Test

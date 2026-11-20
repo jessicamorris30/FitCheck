@@ -54,6 +54,16 @@ public class BlobStorageService {
         blob.uploadWithResponse(options, null, null);
     }
 
+    /** Uploads small in-memory content (e.g. a generated thumbnail). */
+    public void upload(String blobName, byte[] data, String contentType) {
+        upload(blobName, new java.io.ByteArrayInputStream(data), data.length, contentType);
+    }
+
+    /** Downloads a whole blob into memory. Only for small-ish files like photos (≤ 10 MB). */
+    public byte[] download(String blobName) {
+        return container.getBlobClient(blobName).downloadContent().toBytes();
+    }
+
     /** Deletes a blob. Deleting something that's already gone is not an error. */
     public void delete(String blobName) {
         container.getBlobClient(blobName).deleteIfExists();

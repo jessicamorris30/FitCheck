@@ -6,6 +6,7 @@ import com.fitcheck.common.exception.BadRequestException;
 import com.fitcheck.common.exception.NotFoundException;
 import com.fitcheck.storage.BlobStorageService;
 import com.fitcheck.storage.ImageType;
+import com.fitcheck.storage.ThumbnailService;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
 import java.io.IOException;
@@ -33,46 +34,76 @@ public class ClothingService {
     private final ClothingItemRepository items;
     private final UserRepository users;
     private final BlobStorageService storage;
+    private final ThumbnailService thumbnails;
 
-    public ClothingService(ClothingItemRepository items, UserRepository users, BlobStorageService storage) {
+    public ClothingService(ClothingItemRepository items, UserRepository users, BlobStorageService storage,
+            ThumbnailService thumbnails) {
         this.items = items;
         this.users = users;
         this.storage = storage;
+        this.thumbnails = thumbnails;
     }
 
     /**
-     * Stores the photo in Blob Storage, then saves the item row pointing at it.
+     * Stores the photo and a small thumbnail in Blob Storage, then saves the item row pointing at both.
      *
-     * <p>Two systems are involved and they can't share one transaction, so the order matters:
-     * upload the photo first, then save the row. If saving the row fails, we delete the photo
-     * again so no orphaned files pile up.
+     * <p>Order matters:
+     * <ol>
+     *   <li>Make the thumbnail first. Decoding the whole image is also a real check that the file
+     *       is a working image (the magic-bytes check only looks at the first few bytes).
+     *   <li>Upload the photo and the thumbnail.
+     *   <li>Save the row. If that fails, delete both uploads again so no orphaned files pile up.
+     * </ol>
      *
-     * @throws BadRequestException if the file is empty or not a JPEG, PNG or WebP image
+     * @throws BadRequestException if the file is empty, not a JPEG/PNG/WebP, or can't be decoded
      */
     @Transactional
     public ClothingItemResponse create(UUID ownerId, ClothingItemRequest request, MultipartFile image) {
         ImageType type = detectImageType(image);
+        byte[] original = readBytes(image);
+        byte[] thumbnail;
+        try {
+            thumbnail = thumbnails.toJpeg(original, ThumbnailService.THUMBNAIL_SIZE);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("We couldn't read that image. Please try a different photo.");
+        }
 
         // users/<ownerId>/<random>.jpg: random so names never collide or reveal anything.
-        String blobName = "users/" + ownerId + "/" + UUID.randomUUID() + "." + type.extension();
+        String baseName = "users/" + ownerId + "/" + UUID.randomUUID();
+        String blobName = baseName + "." + type.extension();
+        String thumbName = baseName + "_thumb.jpg";
 
-        try (InputStream data = image.getInputStream()) {
-            storage.upload(blobName, data, image.getSize(), type.contentType());
-        } catch (IOException e) {
-            throw new UncheckedIOException("Could not read uploaded file", e);
-        }
-
+        storage.upload(blobName, original, type.contentType());
         try {
+            storage.upload(thumbName, thumbnail, "image/jpeg");
             // getReferenceById: a placeholder for the user without loading the row; we only need its id.
             User owner = users.getReferenceById(ownerId);
-            ClothingItem item = items.saveAndFlush(new ClothingItem(
-                    owner, request.name(), request.category(), request.color(), request.tags(), blobName));
-            return ClothingItemResponse.from(item, storage.readUrl(blobName));
+            ClothingItem item = new ClothingItem(
+                    owner, request.name(), request.category(), request.color(), request.tags(), blobName);
+            item.setThumbnailBlobName(thumbName);
+            return toResponse(items.saveAndFlush(item));
         } catch (RuntimeException e) {
-            log.warn("Saving clothing item failed; removing uploaded blob {}", blobName);
+            log.warn("Saving clothing item failed; removing uploaded blobs {} and {}", blobName, thumbName);
             storage.delete(blobName);
+            storage.delete(thumbName);
             throw e;
         }
+    }
+
+    /**
+     * Makes and stores a thumbnail for an item that doesn't have one yet (uploaded before
+     * thumbnails existed). Used by ThumbnailBackfill. Does nothing if it already has one.
+     */
+    @Transactional
+    public void createMissingThumbnail(UUID itemId) {
+        ClothingItem item = items.findById(itemId).orElse(null);
+        if (item == null || item.getThumbnailBlobName() != null) {
+            return;
+        }
+        String thumbName = item.getBlobName().replaceFirst("\\.[^.]+$", "") + "_thumb.jpg";
+        byte[] thumbnail = thumbnails.toJpeg(storage.download(item.getBlobName()), ThumbnailService.THUMBNAIL_SIZE);
+        storage.upload(thumbName, thumbnail, "image/jpeg");
+        item.setThumbnailBlobName(thumbName);
     }
 
     /**
@@ -128,16 +159,21 @@ public class ClothingService {
     @Transactional
     public void delete(UUID ownerId, UUID itemId) {
         ClothingItem item = findOwned(ownerId, itemId);
-        String blobName = item.getBlobName();
+        List<String> blobs = new java.util.ArrayList<>(List.of(item.getBlobName()));
+        if (item.getThumbnailBlobName() != null) {
+            blobs.add(item.getThumbnailBlobName());
+        }
         items.delete(item);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                try {
-                    storage.delete(blobName);
-                } catch (RuntimeException e) {
-                    log.warn("Item deleted but its photo {} could not be removed", blobName, e);
+                for (String blob : blobs) {
+                    try {
+                        storage.delete(blob);
+                    } catch (RuntimeException e) {
+                        log.warn("Item deleted but its file {} could not be removed", blob, e);
+                    }
                 }
             }
         });
@@ -149,7 +185,15 @@ public class ClothingService {
     }
 
     private ClothingItemResponse toResponse(ClothingItem item) {
-        return ClothingItemResponse.from(item, storage.readUrl(item.getBlobName()));
+        return ClothingItemResponse.from(item, storage);
+    }
+
+    private static byte[] readBytes(MultipartFile image) {
+        try {
+            return image.getBytes(); // at most 10 MB (multipart limit), fine to hold in memory
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not read uploaded file", e);
+        }
     }
 
     private static ImageType detectImageType(MultipartFile image) {

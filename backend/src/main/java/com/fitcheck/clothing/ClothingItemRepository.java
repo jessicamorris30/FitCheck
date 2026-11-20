@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * Database access for {@link ClothingItem}.
@@ -34,4 +35,8 @@ public interface ClothingItemRepository extends JpaRepository<ClothingItem, UUID
      * Ids that don't exist or belong to someone else are simply missing from the result.
      */
     List<ClothingItem> findAllByIdInAndOwner_Id(Collection<UUID> ids, UUID ownerId);
+
+    /** Items that don't have a thumbnail yet (uploaded before thumbnails existed). Ids only, to keep it light. */
+    @Query("select i.id from ClothingItem i where i.thumbnailBlobName is null")
+    List<UUID> findIdsWithoutThumbnail();
 }

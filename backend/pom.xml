@@ -31,6 +31,8 @@
 		<anthropic-java.version>3.4.0</anthropic-java.version>
 		<jjwt.version>0.13.0</jjwt.version>
 		<azure-storage-blob.version>12.37.1</azure-storage-blob.version>
+		<imageio-webp.version>3.15.3</imageio-webp.version>
+		<metadata-extractor.version>2.22.0</metadata-extractor.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -84,6 +86,19 @@
 			<groupId>com.azure</groupId>
 			<artifactId>azure-storage-blob</artifactId>
 			<version>${azure-storage-blob.version}</version>
+		</dependency>
+
+		<!-- Thumbnails: lets Java's ImageIO read WebP photos (JPEG and PNG are built in) -->
+		<dependency>
+			<groupId>com.twelvemonkeys.imageio</groupId>
+			<artifactId>imageio-webp</artifactId>
+			<version>${imageio-webp.version}</version>
+		</dependency>
+		<!-- Thumbnails: reads the EXIF "orientation" note in phone photos so thumbnails aren't sideways -->
+		<dependency>
+			<groupId>com.drewnoakes</groupId>
+			<artifactId>metadata-extractor</artifactId>
+			<version>${metadata-extractor.version}</version>
 		</dependency>
 
 		<!-- JWT access tokens -->

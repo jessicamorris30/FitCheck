@@ -79,7 +79,7 @@ export default function OutfitItemPicker({ selectedIds, onToggle, full }: Outfit
                     selected ? 'border-gray-900' : 'border-transparent hover:border-gray-300'
                   }`}
                 >
-                  <img src={item.imageUrl} alt="" loading="lazy" className="aspect-[3/4] w-full bg-gray-100 object-cover" />
+                  <img src={item.thumbnailUrl} alt="" loading="lazy" className="aspect-[3/4] w-full bg-gray-100 object-cover" />
                   {selected && (
                     <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-sm text-white">
                       ✓

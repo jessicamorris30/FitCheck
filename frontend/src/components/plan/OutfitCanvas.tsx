@@ -41,7 +41,7 @@ export default function OutfitCanvas({ items, onRemove, onMove, onClear }: Outfi
         <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {items.map((item, index) => (
             <li key={item.id} className="relative overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <img src={item.imageUrl} alt={item.name} className="aspect-[3/4] w-full object-cover" />
+              <img src={item.thumbnailUrl} alt={item.name} className="aspect-[3/4] w-full object-cover" />
 
               {/* Position badge: shows the order is meaningful. */}
               <span className="absolute top-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-xs font-medium">

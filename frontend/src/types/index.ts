@@ -39,7 +39,10 @@ export interface ClothingItem {
   category: ClothingCategory
   color: string | null
   tags: string[]
+  /** Full-size photo (signed link, expires after ~15 min). Use on detail pages. */
   imageUrl: string
+  /** Small JPEG version (≤ 320px). Use in grids and previews: much faster to load. */
+  thumbnailUrl: string
   createdAt: string
 }
 

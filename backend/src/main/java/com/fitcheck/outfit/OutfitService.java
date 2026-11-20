@@ -119,7 +119,7 @@ public class OutfitService {
 
     private OutfitResponse toResponse(Outfit outfit) {
         List<ClothingItemResponse> items = outfit.getClothingItems().stream()
-                .map(c -> ClothingItemResponse.from(c, storage.readUrl(c.getBlobName())))
+                .map(c -> ClothingItemResponse.from(c, storage))
                 .toList();
         return new OutfitResponse(outfit.getId(), outfit.getName(), outfit.getNotes(), items,
                 outfit.getCreatedAt(), outfit.getUpdatedAt());

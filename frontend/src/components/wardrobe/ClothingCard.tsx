@@ -23,7 +23,7 @@ export default function ClothingCard({ item }: { item: ClothingItem }) {
           <div className="flex h-full items-center justify-center text-xs text-gray-400">Image unavailable</div>
         ) : (
           <img
-            src={item.imageUrl}
+            src={item.thumbnailUrl}
             alt={item.name}
             loading="lazy" // only download images as they scroll into view
             onError={() => setBroken(true)}
