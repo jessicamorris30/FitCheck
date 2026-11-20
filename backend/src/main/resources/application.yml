@@ -80,6 +80,8 @@ fitcheck:
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
     verification-ttl: 24h
     resend-cooldown: 60s
+    # Short on purpose: a reset link is a key to the account.
+    password-reset-ttl: 1h
 
   storage:
     connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}

@@ -54,6 +54,35 @@ public class EmailSender {
         send(to, "Confirm your FitCheck email", text, html);
     }
 
+    public void sendPasswordResetEmail(String to, String resetUrl) {
+        String text = """
+                Someone (hopefully you) asked to reset the password for your FitCheck account.
+
+                To choose a new password, open this link:
+                %s
+
+                The link works once and is valid for 1 hour. If you didn't ask for this, you can ignore \
+                this email: your password stays the same.
+                """.formatted(resetUrl);
+
+        String safeUrl = HtmlUtils.htmlEscape(resetUrl);
+        String html = """
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#111">
+                  <h1 style="font-size:22px">Reset your FitCheck password</h1>
+                  <p>Someone (hopefully you) asked to reset the password for your FitCheck account.</p>
+                  <p style="margin:28px 0">
+                    <a href="%s" style="background:#111;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">
+                      Choose a new password
+                    </a>
+                  </p>
+                  <p style="font-size:13px;color:#666">Or paste this link into your browser:<br>%s</p>
+                  <p style="font-size:13px;color:#666">The link works once and is valid for 1 hour. If you didn't ask for this, you can ignore this email: your password stays the same.</p>
+                </div>
+                """.formatted(safeUrl, safeUrl);
+
+        send(to, "Reset your FitCheck password", text, html);
+    }
+
     /** Sends a message with both a plain-text and an HTML version; mail apps show the best one they support. */
     private void send(String to, String subject, String text, String html) {
         try {

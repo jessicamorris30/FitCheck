@@ -20,6 +20,8 @@ Errors use one shape (`ApiError`):
 | POST | `/auth/refresh` | none (uses the refresh cookie) | `200 AuthResponse` + rotates the refresh cookie |
 | POST | `/auth/logout` | none | `204`, revokes the token family and clears the cookie |
 | POST | `/auth/verify-email` | `{ token }` | `200 UserResponse`, or `400` if the link is invalid or expired |
+| POST | `/auth/forgot-password` | `{ email }` | always `204`, for every address; emails a reset link (valid 1 h, single-use) if the account exists |
+| POST | `/auth/reset-password` | `{ token, newPassword }` | `204`, then log in; all sessions are revoked and the email counts as confirmed. `400` if the link is invalid, used or expired |
 | POST | `/auth/change-password` | `{ currentPassword, newPassword }` (**login required**) | `200 AuthResponse` + a new refresh cookie for this device; every other session is revoked. `400` with `fieldErrors.currentPassword` / `newPassword` |
 
 `AuthResponse`:

@@ -72,6 +72,12 @@ New accounts start unverified (`users.email_verified_at` is null) and can use th
 
 Not enforced yet: unverified users can do everything. Later features (password reset, AI suggestions) can require `emailVerified`.
 
+## Changing and resetting passwords
+
+- **Change password** (`POST /auth/change-password`, logged in): checks the current password, then saves the new one. **All** refresh tokens of the user are revoked, so every other device is signed out, and this device gets a fresh session. A wrong current password is a `400` on that field, not a `401`; a `401` would trigger the frontend's silent refresh.
+- **Forgot password** (`POST /auth/forgot-password`): **always `204`**, for every address, so the form can't reveal who has an account. Repeats within 60 s are silently ignored, again with no 429, which would also reveal that the account exists. If the account exists, a random token is created (only its SHA-256 hash is stored, in `password_reset_tokens`, V5) and the link `<FRONTEND_URL>/reset-password?token=…` is emailed after commit.
+- **Reset** (`POST /auth/reset-password`): the token must be unused and less than **1 hour** old. It sets the new password, marks the email confirmed (they read the inbox), uses up all other reset links, and revokes all sessions. The user then logs in.
+
 ## Later hardening
 
 - Rate-limit `/auth/login` and `/auth/register`.

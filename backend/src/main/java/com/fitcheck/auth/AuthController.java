@@ -3,6 +3,8 @@ package com.fitcheck.auth;
 import com.fitcheck.auth.AuthService.AuthSession;
 import com.fitcheck.auth.dto.AuthResponse;
 import com.fitcheck.auth.dto.ChangePasswordRequest;
+import com.fitcheck.auth.dto.ForgotPasswordRequest;
+import com.fitcheck.auth.dto.ResetPasswordRequest;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.auth.dto.VerifyEmailRequest;
@@ -37,11 +39,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final EmailVerificationService emailVerification;
+    private final PasswordResetService passwordReset;
     private final JwtProperties jwt;
 
-    public AuthController(AuthService authService, EmailVerificationService emailVerification, JwtProperties jwt) {
+    public AuthController(AuthService authService, EmailVerificationService emailVerification,
+            PasswordResetService passwordReset, JwtProperties jwt) {
         this.authService = authService;
         this.emailVerification = emailVerification;
+        this.passwordReset = passwordReset;
         this.jwt = jwt;
     }
 
@@ -94,6 +99,26 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request) {
         return withRefreshCookie(HttpStatus.OK,
                 authService.changePassword(me.id(), request.currentPassword(), request.newPassword()));
+    }
+
+    /**
+     * POST /api/auth/forgot-password {"email"} → always 204, whether or not the email has an
+     * account (so this can't be used to discover who's registered). If it does, a reset link is emailed.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordReset.requestReset(request.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * POST /api/auth/reset-password {"token", "newPassword"} → 204; the user then logs in with the
+     * new password. 400 if the link is invalid, used or expired, or the password is invalid.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordReset.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     /** POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice. */

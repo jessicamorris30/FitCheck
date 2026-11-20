@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import AccountPage from './pages/AccountPage.tsx'
 import Layout from './components/layout/Layout.tsx'
 import ClothingDetailPage from './pages/ClothingDetailPage.tsx'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.tsx'
 import NotFoundPage from './pages/NotFoundPage.tsx'
 import EditOutfitPage from './pages/EditOutfitPage.tsx'
 import OutfitDetailPage from './pages/OutfitDetailPage.tsx'
@@ -20,6 +22,8 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       {/* Public: the email link may be opened on a device where the user isn't logged in. */}
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>

@@ -27,6 +27,16 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return data
 }
 
+/** Asks for a reset link by email. Always succeeds, whether or not the email has an account. */
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post('/auth/forgot-password', { email })
+}
+
+/** Sets a new password using the token from the reset email. Afterwards, log in normally. */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await api.post('/auth/reset-password', { token, newPassword })
+}
+
 /** Confirms an email address using the token from the link in the confirmation email. */
 export async function verifyEmail(token: string): Promise<User> {
   const { data } = await api.post<User>('/auth/verify-email', { token })

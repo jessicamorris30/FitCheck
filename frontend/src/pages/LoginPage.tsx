@@ -83,7 +83,10 @@ export default function LoginPage() {
           error={fieldErrors.password}
           required
         />
-        <Button type="submit" loading={submitting} className="mt-2">
+        <Link to="/forgot-password" className="-mt-2 self-end text-sm text-gray-600 underline hover:text-gray-900">
+          Forgot password?
+        </Link>
+        <Button type="submit" loading={submitting}>
           Log in
         </Button>
       </form>
