@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import AccountPage from './pages/AccountPage.tsx'
 import Layout from './components/layout/Layout.tsx'
 import ClothingDetailPage from './pages/ClothingDetailPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/wardrobe/:id" element={<ClothingDetailPage />} />
           <Route path="/plan" element={<PlanPage />} />
           <Route path="/outfits" element={<OutfitsPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/outfits/:id" element={<OutfitDetailPage />} />
           <Route path="/outfits/:id/edit" element={<EditOutfitPage />} />
         </Route>

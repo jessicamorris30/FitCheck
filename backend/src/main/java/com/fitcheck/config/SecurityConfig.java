@@ -50,6 +50,9 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Rules are checked top to bottom, first match wins: this one must come
+                        // before the public /api/auth/** rule below.
+                        .requestMatchers("/api/auth/change-password").authenticated()
                         // Public: sign-up, login, token refresh, and the health check.
                         .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
                         // Spring forwards errors to /error internally; keep it open so real

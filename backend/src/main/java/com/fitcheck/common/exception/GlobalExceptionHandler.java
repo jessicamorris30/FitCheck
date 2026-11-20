@@ -82,6 +82,14 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    /** One field is wrong in a way only the service can tell (e.g. wrong current password) → 400 + fieldErrors. */
+    @ExceptionHandler(FieldErrorException.class)
+    public ResponseEntity<ApiError> handleFieldError(FieldErrorException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(new ApiError(status.value(), status.getReasonPhrase(),
+                ex.getMessage(), Instant.now(), Map.of(ex.getField(), ex.getMessage())));
+    }
+
     /** Body is missing or isn't valid JSON → 400. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadable(HttpMessageNotReadableException ex) {

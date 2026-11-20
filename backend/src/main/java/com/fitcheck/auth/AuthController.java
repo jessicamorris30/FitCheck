@@ -2,6 +2,7 @@ package com.fitcheck.auth;
 
 import com.fitcheck.auth.AuthService.AuthSession;
 import com.fitcheck.auth.dto.AuthResponse;
+import com.fitcheck.auth.dto.ChangePasswordRequest;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.auth.dto.VerifyEmailRequest;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.WebUtils;
 
 /**
- * HTTP endpoints under /api/auth. These are public (see SecurityConfig).
+ * HTTP endpoints under /api/auth. These are public (see SecurityConfig), except change-password.
  *
  * <p>Register, login and refresh return the access token in the JSON body and the refresh token
  * in an HttpOnly cookie. The cookie handling lives here because cookies are an HTTP concern.
@@ -80,6 +82,18 @@ public class AuthController {
     @PostMapping("/verify-email")
     public UserResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         return UserResponse.from(emailVerification.verify(request.token()));
+    }
+
+    /**
+     * POST /api/auth/change-password {"currentPassword", "newPassword"} (login required)
+     * → 200 + a new AuthResponse + a new refresh cookie for THIS device; every other device is signed out.
+     * 400 with fieldErrors if the current password is wrong or the new one is invalid or unchanged.
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<AuthResponse> changePassword(@AuthenticationPrincipal AuthenticatedUser me,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        return withRefreshCookie(HttpStatus.OK,
+                authService.changePassword(me.id(), request.currentPassword(), request.newPassword()));
     }
 
     /** POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice. */

@@ -18,6 +18,15 @@ export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }
 
+/**
+ * Changes the password. Every other device is signed out; this device gets a fresh session
+ * (new access token in the response, new refresh cookie set by the server).
+ */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>('/auth/change-password', { currentPassword, newPassword })
+  return data
+}
+
 /** Confirms an email address using the token from the link in the confirmation email. */
 export async function verifyEmail(token: string): Promise<User> {
   const { data } = await api.post<User>('/auth/verify-email', { token })

@@ -13,6 +13,8 @@ export interface AuthContextValue {
   logout: () => Promise<void>
   /** Replace the stored user, e.g. after the email is confirmed. Ignored if a different user. */
   updateUser: (user: User) => void
+  /** Change the password; this device stays logged in with the fresh session the server returns. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -96,11 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => (current && current.id === updated.id ? updated : current))
   }, [])
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      // The old session was revoked on the server; switch to the new one it handed back.
+      startSession(await authApi.changePassword(currentPassword, newPassword))
+    },
+    [startSession],
+  )
+
   // useMemo: only hand children a new object when something actually changed,
   // so components using useAuth() don't re-render for no reason.
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, updateUser }),
-    [user, loading, login, register, logout, updateUser],
+    () => ({ user, loading, login, register, logout, updateUser, changePassword }),
+    [user, loading, login, register, logout, updateUser, changePassword],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

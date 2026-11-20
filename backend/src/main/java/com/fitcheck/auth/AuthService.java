@@ -4,6 +4,7 @@ import com.fitcheck.auth.dto.AuthResponse;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.common.exception.ConflictException;
+import com.fitcheck.common.exception.FieldErrorException;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
@@ -111,6 +112,34 @@ public class AuthService {
     public AuthSession refresh(String refreshToken) {
         RefreshTokenService.IssuedToken next = refreshTokens.rotate(refreshToken);
         return new AuthSession(accessFor(next.user()), next.value());
+    }
+
+    /**
+     * Changes the password of the logged-in user.
+     *
+     * <p>Afterwards every existing session is signed out, on every device: if someone else knew
+     * the old password and was logged in, they're out. This device gets a brand-new session, so
+     * the user who just changed their password stays logged in here.
+     *
+     * <p>Access tokens already handed out elsewhere can't be "recalled" (they're checked by
+     * signature only), but they expire within 15 minutes and can't be refreshed anymore.
+     *
+     * @throws FieldErrorException if the current password is wrong, or the new one is the same
+     */
+    @Transactional
+    public AuthSession changePassword(UUID userId, String currentPassword, String newPassword) {
+        User user = users.findById(userId).orElseThrow(() -> new UnauthorizedException("Please log in again"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new FieldErrorException("currentPassword", "Current password is incorrect");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new FieldErrorException("newPassword", "Choose a password different from your current one");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        refreshTokens.revokeAll(userId);
+        return startSession(user);
     }
 
     /** Ends the session this refresh token belongs to. */

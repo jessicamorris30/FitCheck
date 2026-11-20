@@ -81,6 +81,12 @@ public class RefreshTokenService {
                 .ifPresent(t -> tokens.revokeFamily(t.getFamilyId(), clock.instant()));
     }
 
+    /** Signs this user out everywhere: every device's refresh token stops working. */
+    @Transactional
+    public int revokeAll(UUID userId) {
+        return tokens.revokeAllForUser(userId, clock.instant());
+    }
+
     private record Created(RefreshToken entity, IssuedToken issued) {
     }
 

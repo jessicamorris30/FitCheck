@@ -28,7 +28,11 @@ export default function Navbar() {
       </NavLink>
 
       <div className="ml-auto flex items-center gap-4 text-sm">
-        {user && <span className="text-gray-500">{user.email}</span>}
+        {user && (
+          <NavLink to="/account" title="Your account" className={link}>
+            {user.email}
+          </NavLink>
+        )}
         {user && (
           <button onClick={handleLogout} className="font-medium text-gray-900 hover:underline">
             Log out
