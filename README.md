@@ -1,5 +1,7 @@
 # FitCheck
 
+[![CI](https://github.com/jessicamorris30/FitCheck/actions/workflows/ci.yml/badge.svg)](https://github.com/jessicamorris30/FitCheck/actions/workflows/ci.yml)
+
 FitCheck is a web app for digitizing your wardrobe and planning outfits.
 
 - **Sign up** with email and password.

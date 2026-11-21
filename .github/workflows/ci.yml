@@ -1,0 +1,111 @@
+# Continuous integration: on every push to main and every pull request, GitHub starts fresh
+# Linux machines, builds FitCheck and runs all its checks. A red ✗ next to a commit means
+# something broke; a green ✓ means everything passed. Nothing here is deployed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# If you push again while a run is still going, cancel the old run: only the newest matters.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # this workflow only needs to read the code
+
+jobs:
+  backend:
+    name: Backend (Java tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Throwaway databases/servers for this run only, like our docker-compose.yml.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fitcheck
+          POSTGRES_USER: fitcheck
+          POSTGRES_PASSWORD: fitcheck
+        ports: ["5432:5432"]
+        # Wait until Postgres is really ready before the tests start.
+        options: >-
+          --health-cmd "pg_isready -U fitcheck -d fitcheck"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      mailpit:
+        image: axllent/mailpit
+        ports: ["1025:1025"]
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven # reuse downloaded libraries between runs: much faster
+
+      - name: Set up Node (to run Azurite)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # Same Azurite version and flags as docker-compose.yml, started in the background.
+      - name: Start Azurite (local Azure Blob Storage)
+        run: |
+          npx -y azurite@3.37.0 azurite-blob --blobHost 127.0.0.1 --blobPort 10000 \
+            --location "$RUNNER_TEMP/azurite" --loose --skipApiVersionCheck > "$RUNNER_TEMP/azurite.log" 2>&1 &
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null "http://127.0.0.1:10000/devstoreaccount1?comp=list" && echo "Azurite is up" && exit 0
+            sleep 2
+          done
+          echo "Azurite did not start"; cat "$RUNNER_TEMP/azurite.log"; exit 1
+
+      # Uses the dev profile's built-in fallbacks (local Postgres, Azurite key, dev JWT key).
+      # No ANTHROPIC_API_KEY: the tests use a fake Claude and live tests are skipped.
+      - name: Run all backend tests
+        working-directory: backend
+        run: ./mvnw -B test
+
+      # If something failed, keep the detailed test reports so you can download and read them.
+      - name: Keep test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # "npm ci" installs exactly what package-lock.json says: the same versions you tested with.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check and build
+        run: npm run build

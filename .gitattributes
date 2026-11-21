@@ -1,0 +1,19 @@
+# Line endings, for everyone and every computer working on this repo.
+#
+# Git stores text files with LF ("\n") line endings and checks them out with LF too, on Windows
+# as well. Modern editors (VS Code included) handle LF fine, and it stops the
+# "LF will be replaced by CRLF" warnings on every commit.
+* text=auto eol=lf
+
+# Windows scripts keep Windows line endings (CRLF), or cmd.exe can misread them.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never touch them.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.jar binary
