@@ -59,13 +59,20 @@ public class SecurityConfig {
                         // Rules are checked top to bottom, first match wins: this one must come
                         // before the public /api/auth/** rule below.
                         .requestMatchers("/api/auth/change-password").authenticated()
-                        // Public: sign-up, login, token refresh, and the health check.
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        // Public API: sign-up, login, token refresh...
+                        .requestMatchers("/api/auth/**").permitAll()
+                        // ...the rest of the API requires a logged-in user.
+                        .requestMatchers("/api/**").authenticated()
+                        // Health checks (incl. /liveness and /readiness for Azure) are public;
+                        // any other Actuator endpoint is closed.
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/**").denyAll()
                         // Spring forwards errors to /error internally; keep it open so real
                         // errors (like 404) aren't hidden behind a 401.
                         .requestMatchers("/error").permitAll()
-                        // Everything else requires a logged-in user.
-                        .anyRequest().authenticated())
+                        // Everything else is the website itself (index.html, JS, CSS, images):
+                        // public, like any website. The DATA behind it is protected by /api/**.
+                        .anyRequest().permitAll())
                 .exceptionHandling(e -> e
                         // Not logged in → 401 in our ApiError format (instead of a login page).
                         .authenticationEntryPoint((request, response, ex) ->

@@ -1,0 +1,53 @@
+# Production settings (active when SPRING_PROFILES_ACTIVE=prod, e.g. on Azure).
+#
+# The rule here: NO fallbacks. Every secret and address must come from the environment.
+# A placeholder like ${DB_URL} without ":default" makes the app refuse to start if it's
+# missing, which is much better than quietly running with a dev value.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+
+server:
+  # Azure's front door (ingress) receives the visitor's request and passes it on, adding headers
+  # like X-Forwarded-For (the visitor's real IP) and X-Forwarded-Proto (https). This tells Spring
+  # to trust them, so rate limits see real visitor IPs and links/redirects use https.
+  # Only safe because the app is reachable ONLY through that front door.
+  forward-headers-strategy: framework
+  # Let requests in progress finish before the container stops (e.g. during a new deployment).
+  shutdown: graceful
+
+management:
+  endpoint:
+    health:
+      # /actuator/health/liveness ("is the process alive?") and /readiness ("can it take traffic?"),
+      # which Azure Container Apps uses to decide when to restart or route to the app.
+      probes:
+        enabled: true
+
+fitcheck:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  jwt:
+    secret: ${JWT_SECRET}
+    refresh-cookie-secure: true # HTTPS only
+  storage:
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+  mail:
+    from: ${MAIL_FROM}
+    frontend-url: ${FRONTEND_URL}
+
+logging:
+  level:
+    root: INFO
+    com.fitcheck: INFO

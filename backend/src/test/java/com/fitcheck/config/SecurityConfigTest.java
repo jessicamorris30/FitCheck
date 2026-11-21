@@ -40,7 +40,12 @@ class SecurityConfigTest {
 
     @Test
     void noDefaultLoginPage() throws Exception {
-        mvc.perform(get("/login")).andExpect(status().isUnauthorized());
+        // /login is now OUR React login page (served from static/index.html, step 5.6),
+        // never Spring Security's built-in "Please sign in" form.
+        mvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Please sign in"))));
     }
 
     @Test
