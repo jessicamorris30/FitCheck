@@ -180,7 +180,8 @@ short-lived GitHub token that Azure trusts, so there is no stored password), cha
 `ghcr.io/jessicamorris30/fitcheck:<commit>`, and waits until that version is serving.
 
 - **One-time setup**: `.\infra\setup-github-deploy.ps1`. It creates the "FitCheck GitHub deploy" app
-  registration, trusts only `repo:jessicamorris30/FitCheck:environment:production`, and gives it a
+  registration, trusts only `repo:jessicamorris30@<owner id>/FitCheck@<repo id>:environment:production`
+  (GitHub includes the permanent ID numbers, so a renamed or re-created repo can't match), and gives it a
   role that can only manage Container Apps in `rg-fitcheck`. The IDs it prints go in the workflow's `env`.
 - **See deploys**: the repo page → *Deployments* → production.
 - **Roll back**: re-run the deploy job of an older green run (Actions → that run → Re-run jobs), or

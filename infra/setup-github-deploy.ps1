@@ -35,12 +35,22 @@ if (-not (az ad sp list --filter "appId eq '$appId'" --query "[0].id" -o tsv --o
 }
 $spId = az ad sp list --filter "appId eq '$appId'" --query "[0].id" -o tsv --only-show-errors
 
-# 2. Federated credential: which GitHub jobs may sign in as this app
-$subject = "repo:${repo}:environment:$environment"
+# 2. Federated credential: which GitHub jobs may sign in as this app.
+#    GitHub's tokens name the repo with its permanent ID numbers too (owner@id/repo@id), so a
+#    renamed or re-created repo with the same name can't match. The IDs come from GitHub's API.
+$info = Invoke-RestMethod "https://api.github.com/repos/$repo"
+$owner, $name = $repo.Split("/")
+$subject = "repo:$owner@$($info.owner.id)/$name@$($info.id):environment:$environment"
+# Remove credentials in the older format (without IDs): GitHub no longer sends that.
+az ad app federated-credential list --id $appId --query "[?subject!='$subject'].id" -o tsv --only-show-errors |
+    Where-Object { $_ } | ForEach-Object {
+        az ad app federated-credential delete --id $appId --federated-credential-id $_ --only-show-errors
+        Write-Host "Removed an outdated GitHub trust rule"
+    }
 $existing = az ad app federated-credential list --id $appId --query "[?subject=='$subject'] | length(@)" -o tsv --only-show-errors
 if ($existing -ne "1") {
     $credential = @{
-        name        = "github-$environment"
+        name        = "github-$environment-ids"
         issuer      = "https://token.actions.githubusercontent.com"
         subject     = $subject
         audiences   = @("api://AzureADTokenExchange")
