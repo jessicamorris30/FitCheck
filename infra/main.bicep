@@ -74,11 +74,22 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 // ---------- Container Apps environment ----------
 // The "neighbourhood" the app container lives in: networking, logging, scaling.
 // Consumption plan = pay only while a container is actually running (scale to zero).
-resource containerEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
+// The mode must be set explicitly: left out, Azure now picks "Express", which can't use
+// custom domains. (This is why a newer API version is used here.)
+resource containerEnv 'Microsoft.App/managedEnvironments@2025-10-02-preview' = {
   name: 'cae-fitcheck'
   location: location
   tags: tags
   properties: {
+    // Bicep's type list doesn't know this property yet, but the Azure API does.
+    #disable-next-line BCP037
+    environmentMode: 'WorkloadProfiles'
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {

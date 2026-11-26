@@ -137,6 +137,41 @@ doesn't exist yet: the image registry and deploy pipeline come in step 5.9.
    signs in with and prints the SMTP username. The password is a client secret of that app; it's
    created fresh in the deploy command (step 5.9c), so it's never written down anywhere.
 
+## The app and the domain (step 5.9c)
+
+1. **Deploy the app**: `.\infra\deploy-app.ps1`. It asks (hidden) for the database password and the
+   FitCheck prod Claude key, generates a new JWT key and SMTP password, deploys `main.bicep` with the
+   newest image from GitHub, and waits until the app is up. Run it again any time settings change.
+   It can also **roll back**: `.\infra\deploy-app.ps1 -ImageTag <older commit id>`.
+2. **DNS records** at Porkbun (delete Porkbun's parking records for `@`, `www` and `*` first). The IP is
+   `az containerapp env show -g rg-fitcheck -n cae-fitcheck --query properties.staticIp`; the ID is
+   `az containerapp show -g rg-fitcheck -n fitcheck --query properties.customDomainVerificationId`.
+
+   | Type | Host | Value |
+   | --- | --- | --- |
+   | A | *(blank)* | the environment's static IP |
+   | TXT | `asuid` | the custom domain verification ID |
+   | CNAME | `www` | the app's address (`fitcheck.<…>.azurecontainerapps.io`) |
+   | TXT | `asuid.www` | the custom domain verification ID |
+
+3. **Connect the names and get free HTTPS certificates** (they renew automatically):
+   ```powershell
+   az containerapp hostname add  -g rg-fitcheck -n fitcheck --hostname www.fitcheckwardrobe.com
+   az containerapp hostname bind -g rg-fitcheck -n fitcheck --hostname www.fitcheckwardrobe.com --environment cae-fitcheck --validation-method CNAME
+   az containerapp hostname add  -g rg-fitcheck -n fitcheck --hostname fitcheckwardrobe.com
+   az containerapp hostname bind -g rg-fitcheck -n fitcheck --hostname fitcheckwardrobe.com --environment cae-fitcheck --validation-method HTTP
+   ```
+   If the last command fails with *"IP address '' of environment"*, request the certificate with a TXT
+   check instead (`az containerapp env certificate create … --validation-method TXT`), add the
+   `_dnsauth` TXT record it prints, then bind with `--certificate <its name>`.
+
+Gotchas we hit:
+- **The environment must not be "Express" mode**: Express can't use custom domains. `main.bicep`
+  sets `environmentMode: 'WorkloadProfiles'`; check with
+  `az resource show -g rg-fitcheck -n cae-fitcheck --resource-type Microsoft.App/managedEnvironments --api-version 2025-10-02-preview --query properties.environmentMode`.
+- **Your Porkbun MX records**: those are Porkbun's email forwarding (mail *to* your domain). FitCheck
+  doesn't need them; turn Email Forwarding back on in Porkbun if you want to receive mail there.
+
 ## Turning it all off
 
 ```powershell
