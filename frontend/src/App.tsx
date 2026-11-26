@@ -14,8 +14,18 @@ import RegisterPage from './pages/RegisterPage.tsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.tsx'
 import WardrobePage from './pages/WardrobePage.tsx'
 import ProtectedRoute from './routes/ProtectedRoute.tsx'
+import VersionTag from './components/layout/VersionTag.tsx'
 
 export default function App() {
+  return (
+    <>
+      <AppRoutes />
+      <VersionTag />
+    </>
+  )
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
