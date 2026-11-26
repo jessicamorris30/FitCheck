@@ -16,7 +16,7 @@ nothing. Secrets are typed into your terminal at deploy time and are never saved
 
 ## Monthly cost
 
-Prices are approximate (USD, Canada Central, late 2026). Check the
+Prices are approximate (USD, North Central US, late 2026). Check the
 [Azure pricing calculator](https://azure.microsoft.com/pricing/calculator/) for exact numbers.
 
 | Item | First 12 months | After that |
@@ -35,9 +35,19 @@ in step 5.11 will email you before spending gets anywhere unexpected.
 
 ## Before you deploy (do these yourself)
 
-1. **Azure free account**: <https://azure.microsoft.com/free>. It needs a card to confirm your identity,
-   but you aren't charged during the trial. You get $200 credit for 30 days plus 12 months of free services.
-   When the 30 days are up, Azure asks you to *upgrade to pay-as-you-go* to keep the 12 free months. Without that, everything stops.
+1. **An Azure subscription.** FitCheck uses **Azure for Students**:
+   - $100 credit for 12 months, renewable while you're a student
+   - no card, so there are never surprise charges: when the credit runs out, resources stop
+
+   Student subscriptions can only deploy to a few regions. To list yours:
+   `az policy assignment list --query "[].parameters.listOfAllowedLocations.value" -o json`.
+   FitCheck uses **North Central US** (Chicago), the closest allowed region to Ontario.
+
+   (The regular [free account](https://azure.microsoft.com/free) works too: it gives $200 for 30 days plus 12 free months,
+   needs a card, and allows any region.)
+
+   If `az login` says *No subscriptions found*, the subscription is in another directory. Copy the
+   Directory ID from the portal (account picture → Switch directory) and run `az login --tenant <Directory ID>`.
 2. **Domain**: buy one at [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/)
    or [Porkbun](https://porkbun.com). Both sell at cost with free WHOIS privacy. A `.com` is about
    $10–12/year. You'll add DNS records there in step 5.9.
@@ -64,8 +74,8 @@ foreach ($p in "Microsoft.App","Microsoft.OperationalInsights","Microsoft.DBforP
   az provider register --namespace $p --wait
 }
 
-# 3. The resource group, in Canada Central (Toronto)
-az group create --name rg-fitcheck --location canadacentral
+# 3. The resource group, in North Central US (Chicago). Everything inside uses the same region.
+az group create --name rg-fitcheck --location northcentralus
 
 # 4. A strong database password, generated on your machine and copied to your clipboard.
 #    Paste it into your password manager NOW: you'll need it again in step 5.9.
@@ -81,15 +91,20 @@ az deployment group create -g rg-fitcheck -f infra/main.bicep -p postgresAdminPa
   --query properties.outputs
 ```
 
-Replace `<your-domain>` with the domain you bought, without `https://` or `www`. If you don't have one yet, leave
+Copy only the commands, not the ```` ``` ```` lines around them.
+
+Replace `<your-domain>` with the domain you bought, without `https://` or `www`. This creates the
+email resources, but the domain only gets connected for sending in step 5.9: Azure refuses to connect it
+until DNS records prove you own it. If you don't have one yet, leave
 off `emailDomain=...`. The email resources are added when you run step 6 again later.
 
 To let `psql` on your computer reach the database, add `adminIpAddress=<your IP>`
 (find it at <https://ifconfig.me>).
 
-**If step 6 fails with "location is restricted"**: free subscriptions sometimes can't create PostgreSQL
-in a given region. Delete the group (`az group delete -n rg-fitcheck`) and repeat steps 3–6 with
-`--location canadaeast` (Quebec City).
+**If step 6 fails with "location is restricted" or "RequestDisallowedByPolicy"**: the region isn't
+allowed for your subscription, or PostgreSQL isn't offered there. Delete the group
+(`az group delete -n rg-fitcheck`) and repeat steps 3–6 with another region from your allowed list,
+e.g. `--location westus2`.
 
 ## Check it worked
 

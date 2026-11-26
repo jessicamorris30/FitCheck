@@ -6,14 +6,15 @@
 //
 // It's deployed in stages, switched on by parameters:
 //   5.8  core:  logs, Container Apps environment, PostgreSQL, Blob Storage      (always)
-//        email: Azure Communication Services + your domain                    (emailDomain set)
+//        email: Azure Communication Services + your domain                    (emailDomain set;
+//               connected for sending once verified: emailDomainVerified=true in 5.9)
 //   5.9  app:   the FitCheck container itself                                   (appImage set)
 
 targetScope = 'resourceGroup'
 
 // ---------- Parameters (the inputs) ----------
 
-@description('Azure region for everything. Canada Central = Toronto.')
+@description('Azure region for everything (defaults to the region of the resource group; FitCheck uses North Central US).')
 param location string = resourceGroup().location
 
 @description('Database admin user name (not a secret).')
@@ -28,6 +29,9 @@ param adminIpAddress string = ''
 
 @description('Optional: your domain for email, e.g. fitcheck.example. Empty = skip email resources for now.')
 param emailDomain string = ''
+
+@description('Step 5.9: true once the DNS records for emailDomain are added and Azure shows the domain as Verified. Azure refuses to connect an unverified domain.')
+param emailDomainVerified bool = false
 
 @description('Step 5.9: the container image to run, e.g. ghcr.io/<owner>/fitcheck:<commit>. Empty = do not create the app yet.')
 param appImage string = ''
@@ -171,7 +175,7 @@ resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = if (!
   name: 'ecs-fitcheck-${suffix}'
   location: 'global'
   tags: tags
-  properties: { dataLocation: 'Canada' }
+  properties: { dataLocation: 'United States' }
 
   resource domain 'domains' = {
     name: empty(emailDomain) ? 'unused' : emailDomain
@@ -196,8 +200,8 @@ resource communication 'Microsoft.Communication/communicationServices@2023-04-01
   location: 'global'
   tags: tags
   properties: {
-    dataLocation: 'Canada'
-    linkedDomains: [emailService::domain.id]
+    dataLocation: 'United States'
+    linkedDomains: emailDomainVerified ? [emailService::domain.id] : []
   }
 }
 
