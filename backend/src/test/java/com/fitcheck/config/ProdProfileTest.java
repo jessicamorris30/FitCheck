@@ -5,10 +5,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -21,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * environment variables (here: pointing at the local docker-compose services). Proves the prod
  * configuration loads and behaves as intended.
  */
-@SpringBootTest(properties = {
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "DB_URL=jdbc:postgresql://localhost:5432/fitcheck",
         "POSTGRES_USER=fitcheck",
         "POSTGRES_PASSWORD=fitcheck",
@@ -48,8 +53,13 @@ class ProdProfileTest {
 
     static final String TEST_JWT_SECRET = "cHJvZC1wcm9maWxlLXRlc3Qtc2VjcmV0LW5vdC1yZWFsLTEyMzQ1Njc4OTA=";
 
+    private static final HttpClient http = HttpClient.newHttpClient();
+
     @Autowired
     private MockMvc mvc;
+
+    @LocalServerPort
+    private int port;
 
     @Test
     void refreshCookieRequiresHttpsInProduction() throws Exception {
@@ -61,15 +71,22 @@ class ProdProfileTest {
         assertThat(response.getHeader("Set-Cookie")).contains("Secure").contains("HttpOnly").contains("SameSite=Strict");
     }
 
+    /**
+     * Real HTTP requests to the running server (not MockMvc), because X-Forwarded-For is handled
+     * inside the web server itself. The test connects from 127.0.0.1, a trusted internal address,
+     * just like Azure's front door does.
+     */
     @Test
-    void rateLimitsUseTheVisitorsRealIpFromAzuresProxy() throws Exception {
-        // Two different visitors behind the same proxy (same remote address, different X-Forwarded-For).
-        String visitorA = "203.0.113." + (int) (Math.random() * 250);
+    void rateLimitsUseTheIpAzureRecorded_notOneTheVisitorMadeUp() throws Exception {
+        // Azure APPENDS the visitor's real address; everything before it came from the visitor.
+        String realIp = "203.0.113." + (1 + (int) (Math.random() * 120));
         for (int i = 0; i < 10; i++) {
-            login(visitorA).andExpect(status().isUnauthorized());
+            // A different made-up first entry every time, like an attacker would send.
+            assertThat(httpLogin("198.51.100." + i + ", " + realIp)).isEqualTo(401);
         }
-        login(visitorA).andExpect(status().isTooManyRequests()); // A is limited...
-        login("198.51.100.77").andExpect(status().isUnauthorized()); // ...B is not
+        assertThat(httpLogin("198.51.100.99, " + realIp)).isEqualTo(429); // still limited
+        // A genuinely different visitor isn't affected.
+        assertThat(httpLogin("203.0.113." + (130 + (int) (Math.random() * 120)))).isEqualTo(401);
     }
 
     @Test
@@ -83,10 +100,13 @@ class ProdProfileTest {
         assertThat(Base64.getDecoder().decode(TEST_JWT_SECRET).length).isGreaterThanOrEqualTo(32);
     }
 
-    private org.springframework.test.web.servlet.ResultActions login(String forwardedFor) throws Exception {
-        return mvc.perform(post("/api/auth/login")
+    private int httpLogin(String forwardedFor) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/auth/login"))
                 .header("X-Forwarded-For", forwardedFor)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"nobody-" + System.nanoTime() + "@example.com\",\"password\":\"whatever-1\"}"));
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"email\":\"nobody-" + System.nanoTime() + "@example.com\",\"password\":\"whatever-1\"}"))
+                .build();
+        return http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
     }
 }

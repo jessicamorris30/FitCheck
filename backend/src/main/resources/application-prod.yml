@@ -20,10 +20,15 @@ spring:
 
 server:
   # Azure's front door (ingress) receives the visitor's request and passes it on, adding headers
-  # like X-Forwarded-For (the visitor's real IP) and X-Forwarded-Proto (https). This tells Spring
-  # to trust them, so rate limits see real visitor IPs and links/redirects use https.
-  # Only safe because the app is reachable ONLY through that front door.
-  forward-headers-strategy: framework
+  # like X-Forwarded-For (the visitor's real IP) and X-Forwarded-Proto (https), so rate limits see
+  # real visitor IPs and links/redirects use https.
+  #
+  # "native" = the web server (Tomcat) reads X-Forwarded-For from the END, skipping only trusted
+  # internal proxies (private addresses such as Azure's front door). Azure APPENDS the address it
+  # saw, while anything earlier in the list was sent by the visitor and could be made up.
+  # ("framework" took the FIRST entry, which let a script fake a new IP on every request and get
+  # around the rate limits. Found in the step 5.10 live check.)
+  forward-headers-strategy: native
   # Let requests in progress finish before the container stops (e.g. during a new deployment).
   shutdown: graceful
 
