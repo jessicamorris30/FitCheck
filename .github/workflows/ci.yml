@@ -109,3 +109,32 @@ jobs:
 
       - name: Type-check and build
         run: npm run build
+
+  docker:
+    name: Docker image (build only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Builds the same image Azure will run, to catch a broken Dockerfile early. It isn't pushed
+    # anywhere yet: publishing and deploying comes in step 5.9.
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t fitcheck:ci .
+
+      # Start it with no settings at all: prod mode must refuse to run without its secrets
+      # (fail fast) rather than start up half-configured.
+      - name: Check prod mode refuses to start without secrets
+        run: |
+          set +e
+          timeout 90 docker run --rm fitcheck:ci > run.log 2>&1
+          code=$?
+          set -e
+          tail -n 5 run.log
+          # 0 = it exited "successfully", 124 = still running after 90 s: both mean it didn't refuse.
+          if [ "$code" -eq 0 ] || [ "$code" -eq 124 ]; then
+            echo "Expected the app to stop with an error, got exit code $code"; exit 1
+          fi
+          echo "Refused to start as expected (exit code $code)"

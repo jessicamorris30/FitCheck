@@ -1,0 +1,24 @@
+# Files Docker never copies into a build. Keeps builds fast and, more importantly, keeps secrets
+# and junk out of the image.
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+**/.env.local
+
+# Build output and dependencies (rebuilt inside the image)
+**/node_modules
+frontend/dist
+backend/target
+
+# Version control, editors, docs, scripts, CI
+.git
+.github
+.vscode
+.idea
+docs
+scripts
+infra
+**/*.log
+**/*.md

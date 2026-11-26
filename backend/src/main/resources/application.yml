@@ -92,6 +92,8 @@ fitcheck:
     connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
     container-name: ${AZURE_STORAGE_CONTAINER:clothing-images}
     sas-ttl: 15m
+    # Optional; see StorageProperties. Empty on Azure.
+    public-endpoint: ${AZURE_STORAGE_PUBLIC_ENDPOINT:}
 
   ai:
     # Blank = AI stylist switched off (the rest of the app works normally).

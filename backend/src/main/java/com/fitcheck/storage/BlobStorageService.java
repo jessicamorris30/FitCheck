@@ -119,7 +119,25 @@ public class BlobStorageService {
         OffsetDateTime expiresAt = OffsetDateTime.now(clock.withZone(ZoneOffset.UTC)).plus(properties.sasTtl());
         BlobServiceSasSignatureValues sas = new BlobServiceSasSignatureValues(
                 expiresAt, new BlobSasPermission().setReadPermission(true));
-        return blob.getBlobUrl() + "?" + blob.generateSas(sas);
+        return publicAddress(blob.getBlobUrl()) + "?" + blob.generateSas(sas);
+    }
+
+    /**
+     * Links handed to browsers normally use the same storage address the app uses. If
+     * {@code fitcheck.storage.public-endpoint} is set, links use that address instead: the
+     * signature only covers WHICH file and permissions, not the host name, so it stays valid.
+     * Used when the browser must reach storage differently from the app (local Docker testing),
+     * or later to serve images through a CDN.
+     */
+    private String publicAddress(String blobUrl) {
+        String publicEndpoint = properties.publicEndpoint();
+        if (publicEndpoint == null || publicEndpoint.isBlank()) {
+            return blobUrl;
+        }
+        String accountUrl = container.getAccountUrl();
+        return blobUrl.startsWith(accountUrl)
+                ? publicEndpoint.replaceAll("/+$", "") + blobUrl.substring(accountUrl.length())
+                : blobUrl;
     }
 
     /** Creates the private container the first time it's needed. */

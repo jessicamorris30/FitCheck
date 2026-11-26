@@ -2,11 +2,15 @@ package com.fitcheck.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.fitcheck.config.StorageProperties;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +29,9 @@ class BlobStorageServiceTest {
 
     @Autowired
     private BlobStorageService storage;
+
+    @Autowired
+    private BlobContainerClient container;
 
     private final String blobName = "tests/" + UUID.randomUUID() + ".txt";
 
@@ -80,6 +87,21 @@ class BlobStorageServiceTest {
         storage.delete(blobName); // already gone: no error
 
         assertThat(storage.exists(blobName)).isFalse();
+    }
+
+    @Test
+    void publicEndpointRewritesTheHostButKeepsAWorkingSignature() throws Exception {
+        byte[] content = "via another address".getBytes();
+        storage.upload(blobName, new ByteArrayInputStream(content), content.length, "text/plain");
+
+        // Same storage, but links should say "localhost" instead of "127.0.0.1".
+        var props = new StorageProperties(null, null, Duration.ofMinutes(15),
+                "http://localhost:10000/devstoreaccount1");
+        var rewriting = new BlobStorageService(container, props, Clock.systemUTC());
+
+        String url = rewriting.readUrl(blobName);
+        assertThat(url).startsWith("http://localhost:10000/devstoreaccount1/").contains("sig=");
+        assertThat(get(url).body()).isEqualTo(content); // the signature still works on the new host
     }
 
     private static HttpResponse<byte[]> get(String url) throws Exception {
