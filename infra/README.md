@@ -116,6 +116,27 @@ You should see the Log Analytics workspace, the Container Apps environment, the 
 and the storage account, plus the two email resources if you passed a domain. The app itself
 doesn't exist yet: the image registry and deploy pipeline come in step 5.9.
 
+## Email (step 5.9b)
+
+1. **DNS records** at Porkbun (values from the deployment output `emailVerificationRecords`, or the
+   email domain in the portal):
+
+   | Type | Host | Value |
+   | --- | --- | --- |
+   | TXT | *(blank)* | `ms-domain-verification=…` |
+   | TXT | *(blank)* | `v=spf1 include:spf.protection.outlook.com include:_spf.porkbun.com -all` (one SPF record only: merge into an existing one) |
+   | CNAME | `selector1-azurecomm-prod-net._domainkey` | `selector1-azurecomm-prod-net._domainkey.azurecomm.net` |
+   | CNAME | `selector2-azurecomm-prod-net._domainkey` | `selector2-azurecomm-prod-net._domainkey.azurecomm.net` |
+   | TXT | `_dmarc` | `v=DMARC1; p=none` |
+
+2. **Verify** in the portal: Email Communication Service → Provision domains → your domain → Verify
+   (Domain first, then SPF and DKIM). DMARC isn't checked by Azure.
+3. **Connect the domain** by deploying with `emailDomainVerified=true`. From then on, **always pass
+   `emailDomainVerified=true`**, or the deployment disconnects the domain again.
+4. **Sending identity**: `.\infra\setup-email-sender.ps1`. It creates the app registration that SMTP
+   signs in with and prints the SMTP username. The password is a client secret of that app; it's
+   created fresh in the deploy command (step 5.9c), so it's never written down anywhere.
+
 ## Turning it all off
 
 ```powershell
