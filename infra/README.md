@@ -172,6 +172,21 @@ Gotchas we hit:
 - **Your Porkbun MX records**: those are Porkbun's email forwarding (mail *to* your domain). FitCheck
   doesn't need them; turn Email Forwarding back on in Porkbun if you want to receive mail there.
 
+## Automatic deploys (step 5.9d)
+
+Every push to `main` that passes all checks is deployed by the `deploy` job in
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml): it signs in to Azure with OIDC (a
+short-lived GitHub token that Azure trusts, so there is no stored password), changes the app's image to
+`ghcr.io/jessicamorris30/fitcheck:<commit>`, and waits until that version is serving.
+
+- **One-time setup**: `.\infra\setup-github-deploy.ps1`. It creates the "FitCheck GitHub deploy" app
+  registration, trusts only `repo:jessicamorris30/FitCheck:environment:production`, and gives it a
+  role that can only manage Container Apps in `rg-fitcheck`. The IDs it prints go in the workflow's `env`.
+- **See deploys**: the repo page → *Deployments* → production.
+- **Roll back**: re-run the deploy job of an older green run (Actions → that run → Re-run jobs), or
+  `.\infra\deploy-app.ps1 -ImageTag <older commit id>`.
+- **Settings and secrets** aren't touched by these deploys; change them with `.\infra\deploy-app.ps1`.
+
 ## Turning it all off
 
 ```powershell

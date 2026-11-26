@@ -1,6 +1,8 @@
 # Continuous integration: on every push to main and every pull request, GitHub starts fresh
 # Linux machines, builds FitCheck and runs all its checks. A red ✗ next to a commit means
-# something broke; a green ✓ means everything passed. Nothing here is deployed.
+# something broke; a green ✓ means everything passed.
+# On pushes to main only, and only when all checks pass, it then publishes the Docker image and
+# deploys it to https://fitcheckwardrobe.com (pull requests are only checked, never deployed).
 name: CI
 
 on:
@@ -193,3 +195,60 @@ jobs:
 
       - name: Summary
         run: echo "Published ghcr.io/${{ github.repository_owner }}/fitcheck:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy to fitcheckwardrobe.com
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The "production" environment shows each deploy on the repo's page. Azure only trusts
+    # sign-ins from jobs that use exactly this environment (see infra/setup-github-deploy.ps1).
+    environment:
+      name: production
+      url: https://fitcheckwardrobe.com
+    permissions:
+      contents: read
+      id-token: write # lets this job ask GitHub for a sign-in token for Azure (OIDC)
+    # Never run two deploys at once; a newer one waits for the current one to finish.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      # IDs, not secrets: they say WHO to sign in as. Azure only accepts the sign-in because the
+      # GitHub token proves it comes from this repo's production deploy (no password involved).
+      AZURE_CLIENT_ID: 8458c795-011b-4243-8ebc-e9fdb8d8537c
+      AZURE_TENANT_ID: efcab0e4-b643-4621-b547-f68ceaad3e81
+      AZURE_SUBSCRIPTION_ID: 2679f43e-9511-433d-b77f-d1cb68043ffb
+      IMAGE: ghcr.io/${{ github.repository_owner }}/fitcheck:${{ github.sha }}
+
+    steps:
+      - name: Sign in to Azure (OIDC, no stored password)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      # Only the image changes; settings and secrets stay as infra/deploy-app.ps1 set them.
+      # Azure starts the new version, waits for its health checks, then switches traffic to it,
+      # so a version that can't start never replaces the working one.
+      - name: Update the app to this commit's image
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors
+          az containerapp update -g rg-fitcheck -n fitcheck --image "$IMAGE" --only-show-errors -o none
+
+      - name: Check the new version is serving
+        run: |
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp show -g rg-fitcheck -n fitcheck --only-show-errors \
+              --query "[properties.latestRevisionName, properties.latestReadyRevisionName, properties.template.containers[0].image]" -o tsv | tr '\n' ' ')
+            set -- $STATE
+            if [ "$1" = "$2" ] && [ "$3" = "$IMAGE" ] && \
+               curl -sf -m 20 https://fitcheckwardrobe.com/actuator/health/readiness > /dev/null; then
+              echo "Live: $IMAGE (revision $1)" | tee -a "$GITHUB_STEP_SUMMARY"; exit 0
+            fi
+            echo "Waiting for revision $1 to be ready ($i/30)..."; sleep 10
+          done
+          echo "The new version did not become ready. Logs: az containerapp logs show -g rg-fitcheck -n fitcheck --tail 50"
+          exit 1
