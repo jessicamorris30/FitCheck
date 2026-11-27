@@ -3,6 +3,7 @@ package com.fitcheck.config;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -68,6 +69,17 @@ class SpaHostingTest {
         mvc.perform(get("/api/clothing"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication required"));
+    }
+
+    @Test
+    void wrongMethodOnAWebsiteFileIs405NotAServerError() throws Exception {
+        // Bots POST to random paths all day. Found by the 5xx alert (step 5.11): these used to be 500s,
+        // which look like the app is broken and set the alert off.
+        for (String path : new String[] {"/assets/app-test123.js", "/index.html", "/wardrobe"}) {
+            mvc.perform(post(path))
+                    .andExpect(status().isMethodNotAllowed())
+                    .andExpect(jsonPath("$.status").value(405));
+        }
     }
 
     @Test

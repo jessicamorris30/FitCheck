@@ -188,6 +188,20 @@ short-lived GitHub token that Azure trusts, so there is no stored password), cha
   `.\infra\deploy-app.ps1 -ImageTag <older commit id>`.
 - **Settings and secrets** aren't touched by these deploys; change them with `.\infra\deploy-app.ps1`.
 
+## Monitoring (step 5.11)
+
+[`monitoring.bicep`](monitoring.bicep) needs no secrets, so it can be (re)deployed any time:
+
+```powershell
+az deployment group create -g rg-fitcheck -n monitoring -f infra/monitoring.bicep `
+  -p alertEmail=$(az account show --query user.name -o tsv) monthlyBudget=10
+```
+
+It creates an email contact, a monthly budget (warns at 50%, 100% and when forecast to exceed), four
+alerts (server errors, restarts, database disk, database CPU) and saved log searches. What to do when
+one fires: [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md#when-something-goes-wrong).
+"Test notifications" aren't available on free/student subscriptions; a real alert proves it works.
+
 ## Turning it all off
 
 ```powershell

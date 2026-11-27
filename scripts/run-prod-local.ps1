@@ -11,14 +11,15 @@
 .EXAMPLE
   .\scripts\run-prod-local.ps1            # build + run
   .\scripts\run-prod-local.ps1 -NoBuild   # run the last built image
+  .\scripts\run-prod-local.ps1 -NoBuild -Image ghcr.io/jessicamorris30/fitcheck:<commit>   # run a published image
 #>
-param([switch]$NoBuild)
+param([switch]$NoBuild, [string]$Image = "fitcheck")
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 if (-not $NoBuild) {
     Write-Host "Building image 'fitcheck' (first build takes a few minutes)..."
-    docker build -t fitcheck .
+    docker build -t $Image .
     if ($LASTEXITCODE -ne 0) { throw "docker build failed" }
 }
 
@@ -64,7 +65,9 @@ $envFile = Join-Path $env:TEMP "fitcheck-prod-local.env"
 # Remove a container left over from a previous run (only if there is one).
 if (docker ps -aq --filter "name=^fitcheck-prod-local$") { docker rm -f fitcheck-prod-local | Out-Null }
 try {
-    docker run -d --name fitcheck-prod-local -p 8080:8080 --env-file $envFile fitcheck | Out-Null
+    # Same limits as the Azure Container App (0.5 CPU, 1 GiB), so memory problems show up here too.
+    docker run -d --name fitcheck-prod-local -p 8080:8080 --memory 1g --memory-swap 1g --cpus 0.5 `
+        --env-file $envFile $Image | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "docker run failed" }
 } finally {
     Remove-Item $envFile -ErrorAction SilentlyContinue # it contains the JWT key and maybe the Claude key

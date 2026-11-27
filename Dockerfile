@@ -43,9 +43,12 @@ USER 10001
 # Production settings by default; every secret/address comes from environment variables
 # (see application-prod.yml). Nothing secret is baked into the image.
 ENV SPRING_PROFILES_ACTIVE=prod
-# Container-aware Java: use up to 75% of the container's memory limit for the heap, and if memory
-# ever runs out, exit cleanly so Azure restarts the app instead of it limping along.
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+# Container-aware Java: the heap may use up to 60% of the container's memory limit (614 MiB of 1 GiB).
+# The other ~40% is needed OUTSIDE the heap: loaded classes, threads, network and image buffers.
+# (75% left too little room: phone-photo uploads pushed the total past 1 GiB and the container was
+# killed. Found by the step 5.11 restart alert, reproduced with run-prod-local.ps1.)
+# If the heap itself ever runs out, exit cleanly so Azure restarts the app instead of it limping along.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

@@ -34,8 +34,22 @@
 ## Later: Outfit calendar
 - [ ] Put saved outfits on specific days ("wear this on Friday") with a simple week/month view
 
-## Phase 5: Polish and deploy
-- [ ] Error handling (`GlobalExceptionHandler`), validation messages, loading/empty states
-- [ ] Rate limiting on auth and AI endpoints
-- [ ] Azure deployment (App Service / Container Apps, Flexible Server Postgres, Blob Storage, Key Vault)
-- [ ] CI: build and test backend and frontend on every push
+## Phase 5: Polish and launch ✅ (v1.0.0, live at https://fitcheckwardrobe.com)
+- [x] Account: change password, forgot/reset password, delete account (with all photos)
+- [x] Rate limits on auth endpoints, per-account login lock, frontend polish
+- [x] CI on every push (GitHub Actions)
+- [x] Production profile; one container serves the website and the API
+- [x] Docker image; Azure infrastructure as code (Bicep): Container Apps, PostgreSQL, Blob Storage, email
+- [x] Email from fitcheckwardrobe.com (SPF, DKIM, DMARC); custom domain with HTTPS
+- [x] Automatic deploys on green pushes to main (GitHub OIDC, no stored passwords)
+- [x] Go-live check, including AI prompt-injection tests and a rate-limit spoofing fix
+- [x] Monitoring: alerts, budget, saved log searches; [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## Later
+- [ ] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) can trip
+      refresh-token reuse detection and log the user out: allow the just-replaced token for a few seconds
+- [ ] Decode large photos at reduced size (ImageIO subsampling) to cut upload memory (~50 MB per phone photo today)
+- [ ] Faster cold starts (Spring AOT/CDS) or one always-on copy
+- [ ] Managed identity for storage (user delegation SAS) and Key Vault for secrets
+- [ ] CDN for photos
+- [ ] HEIC (iPhone) photos, tag search, pagination for large wardrobes
