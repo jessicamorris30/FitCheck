@@ -54,6 +54,50 @@ class ThumbnailServiceTest {
     }
 
     @Test
+    void phonePhotoStoredSidewaysBecomesAnUprightThumbnail() {
+        // Like a portrait phone photo: pixels saved landscape (4032×3024) plus EXIF "rotate 90° clockwise".
+        byte[] photo = TestImages.withExifOrientation(TestImages.jpeg(4032, 3024), 6);
+
+        BufferedImage thumb = TestImages.decode(thumbnails.toJpeg(photo, 320));
+
+        assertThat(thumb.getWidth()).isEqualTo(240);
+        assertThat(thumb.getHeight()).isEqualTo(320);
+        // The orange patch sits top-left in the saved pixels; turned clockwise it must be top-RIGHT.
+        assertThat(isOrange(thumb.getRGB(230, 10))).isTrue();
+        assertThat(isOrange(thumb.getRGB(10, 10))).isFalse();
+        assertThat(isOrange(thumb.getRGB(230, 310))).isFalse();
+    }
+
+    @Test
+    void manyPhotosAtOnceAllSucceed() throws Exception {
+        // Only MAX_CONCURRENT are processed at the same moment; the rest must wait, not fail.
+        byte[] photo = TestImages.jpeg(2000, 1500);
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(8)) {
+            var results = pool.invokeAll(java.util.Collections.nCopies(8,
+                    (java.util.concurrent.Callable<byte[]>) () -> thumbnails.toJpeg(photo, 320)));
+            for (var result : results) {
+                assertThat(TestImages.decode(result.get()).getWidth()).isEqualTo(320);
+            }
+        }
+    }
+
+    @Test
+    void refusesAnImageClaimingToBeEnormousBeforeUnpackingIt() {
+        // A tiny file whose header says 30,000×30,000 (900 megapixels).
+        byte[] bomb = TestImages.pngHeaderClaiming(30_000, 30_000);
+
+        assertThatThrownBy(() -> thumbnails.toJpeg(bomb, 320))
+                .isInstanceOf(ImageTooLargeException.class)
+                .hasMessageContaining("30000×30000");
+    }
+
+    private static boolean isOrange(int rgb) {
+        int r = (rgb >> 16) & 0xFF;
+        int b = rgb & 0xFF;
+        return r > 200 && b < 80;
+    }
+
+    @Test
     void rejectsBytesThatArentAnImage() {
         assertThatThrownBy(() -> thumbnails.toJpeg("not an image at all".getBytes(), 320))
                 .isInstanceOf(IllegalArgumentException.class);

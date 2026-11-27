@@ -7,6 +7,7 @@ import com.fitcheck.clothing.ClothingItemRepository;
 import com.fitcheck.clothing.dto.ClothingItemResponse;
 import com.fitcheck.common.exception.BadRequestException;
 import com.fitcheck.storage.BlobStorageService;
+import com.fitcheck.storage.ImageTooLargeException;
 import com.fitcheck.storage.ImageType;
 import com.fitcheck.storage.ThumbnailCache;
 import com.fitcheck.storage.ThumbnailService;
@@ -136,6 +137,8 @@ public class OutfitSuggestionService {
         }
         try {
             return imageResizer.toJpeg(bytes, INSPIRATION_MAX_SIDE);
+        } catch (ImageTooLargeException e) {
+            throw new BadRequestException("That inspiration photo has too many pixels (max 100 megapixels). Please use a smaller one.");
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("We couldn't read that inspiration photo. Please try a different one.");
         }

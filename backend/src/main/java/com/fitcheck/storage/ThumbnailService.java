@@ -12,10 +12,14 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Iterator;
+import java.util.concurrent.Semaphore;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import org.springframework.stereotype.Service;
 
@@ -25,9 +29,11 @@ import org.springframework.stereotype.Service;
  * <p>Used for wardrobe thumbnails (so the grid downloads ~20 KB instead of several MB per item)
  * and, from step 4.3, for showing the wardrobe to Claude cheaply.
  *
- * <p>Steps: decode the photo (JPEG/PNG built into Java, WebP via the TwelveMonkeys plugin, which
- * ImageIO discovers automatically) → turn it upright using its EXIF orientation → shrink it →
- * flatten transparency onto white → encode as JPEG.
+ * <p>Steps: check the size in the file header → decode the photo (JPEG/PNG built into Java, WebP via
+ * the TwelveMonkeys plugin, which ImageIO discovers automatically) → shrink it, flattening
+ * transparency onto white → turn it upright using its EXIF orientation → encode as JPEG.
+ * A 12 MP phone photo needs ~48 MB at its peak (it was ~95 MB when the full-size photo was rotated
+ * too), and at most {@link #MAX_CONCURRENT} photos are processed at once.
  */
 @Service
 public class ThumbnailService {
@@ -35,6 +41,15 @@ public class ThumbnailService {
     /** Longest side of a wardrobe thumbnail, in pixels. */
     public static final int THUMBNAIL_SIZE = 320;
     private static final float JPEG_QUALITY = 0.8f;
+    /** Largest image accepted: 100 megapixels, far above any phone photo (12-50 MP). */
+    public static final long MAX_PIXELS = 100_000_000L;
+    /**
+     * At most 2 photos unpacked at the same moment (~48 MB each for a 12 MP phone photo), so many
+     * uploads at once can't add up to more than the container's 1 GiB. Others wait their turn,
+     * about a second each; with half a CPU, more in parallel wouldn't be faster anyway.
+     */
+    static final int MAX_CONCURRENT = 2;
+    private static final Semaphore PERMITS = new Semaphore(MAX_CONCURRENT, true);
 
     /**
      * @param original the photo's bytes (JPEG, PNG or WebP)
@@ -43,19 +58,63 @@ public class ThumbnailService {
      * @throws IllegalArgumentException if the bytes can't be decoded as an image
      */
     public byte[] toJpeg(byte[] original, int maxSide) {
-        BufferedImage image = decode(original);
-        image = applyOrientation(image, readOrientation(original));
-        image = shrink(image, maxSide);
+        int orientation = readOrientation(original);
+        BufferedImage image;
+        acquirePermit();
+        try {
+            // The memory-hungry part: the full-size photo exists only inside this block.
+            image = shrink(decode(original), maxSide);
+        } finally {
+            PERMITS.release();
+        }
+        // Turned upright AFTER shrinking: rotating a 320px image costs nothing, a 12-megapixel one ~48 MB.
+        image = applyOrientation(image, orientation);
         return encodeJpeg(image);
     }
 
-    private static BufferedImage decode(byte[] bytes) {
+    private static void acquirePermit() {
         try {
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
-            if (image == null) {
+            PERMITS.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting to process an image", e);
+        }
+    }
+
+    /**
+     * Unpacks the photo at full size, after checking its size in the file header.
+     *
+     * <p>Why not unpack fewer pixels? Java's image reader can skip pixels ("subsampling") but can't
+     * average them, and skipping makes stripes and knits change colour or vanish in the thumbnail
+     * (tried and measured: navy/cream stripes came out solid navy). For a wardrobe
+     * that's worse than spending the memory, so the memory is capped by {@link #PERMITS} instead.
+     *
+     * @throws ImageTooLargeException if the image claims more than {@link #MAX_PIXELS}
+     */
+    private static BufferedImage decode(byte[] bytes) {
+        try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            Iterator<ImageReader> readers = in == null ? null : ImageIO.getImageReaders(in);
+            if (readers == null || !readers.hasNext()) {
                 throw new IllegalArgumentException("Not a readable image");
             }
-            return image;
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                // A small file can claim to be enormous (a "decompression bomb"): unpacking a PNG
+                // of 30,000×30,000 needs ~2.7 GB and would crash the app. Checked before unpacking.
+                if ((long) width * height > MAX_PIXELS) {
+                    throw new ImageTooLargeException(width, height);
+                }
+                BufferedImage image = reader.read(0);
+                if (image == null) {
+                    throw new IllegalArgumentException("Not a readable image");
+                }
+                return image;
+            } finally {
+                reader.dispose();
+            }
         } catch (IOException e) {
             throw new IllegalArgumentException("Not a readable image", e);
         }
@@ -97,7 +156,8 @@ public class ThumbnailService {
             case 8 -> { t.translate(0, w); t.rotate(3 * Math.PI / 2); }       // rotate 90° counter-clockwise
             default -> { }
         }
-        BufferedImage out = new BufferedImage(swap ? h : w, swap ? w : h, BufferedImage.TYPE_INT_ARGB);
+        // RGB: by now shrink() has already flattened any transparency onto white.
+        BufferedImage out = new BufferedImage(swap ? h : w, swap ? w : h, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = out.createGraphics();
         g.drawImage(src, t, null);
         g.dispose();

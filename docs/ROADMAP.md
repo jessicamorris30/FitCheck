@@ -48,7 +48,9 @@
 ## Later
 - [x] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) no longer trip
       refresh-token reuse detection: a just-replaced token works for 10 more seconds
-- [ ] Decode large photos at reduced size (ImageIO subsampling) to cut upload memory (~50 MB per phone photo today)
+- [x] Lighter photo uploads: rotate after shrinking (~95 → ~48 MB per phone photo), at most 2 processed
+      at once, images over 100 megapixels refused. (Decoding at reduced size was tried and rejected:
+      Java can only skip pixels, which made striped and knit fabrics change colour in thumbnails.)
 - [ ] Faster cold starts (Spring AOT/CDS) or one always-on copy
 - [ ] Managed identity for storage (user delegation SAS) and Key Vault for secrets
 - [ ] CDN for photos

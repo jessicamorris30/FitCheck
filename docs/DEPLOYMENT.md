@@ -101,7 +101,10 @@ Or from a terminal: `az containerapp logs show -g rg-fitcheck -n fitcheck --tail
   40 seconds while it starts. Options: keep one copy running (`minReplicas: 1`, costs more each month)
   or Spring AOT/CDS to start faster.
 - **Memory**: the container has 1 GiB and Java's heap may use 60% of it (Dockerfile
-  `JAVA_TOOL_OPTIONS`). Under heavy photo uploads memory levels off around 910 MiB. To test changes
+  `JAVA_TOOL_OPTIONS`). The container sits around 950 MiB under heavy photo uploads: Java claims its
+  whole heap allowance up front. What matters is the heap actually in use, which stays below about
+  420 of 595 MiB with 6 phone photos uploading at once. At most 2 photos are processed at the same
+  moment (`ThumbnailService.MAX_CONCURRENT`), and images over 100 megapixels are refused. To test changes
   under the same limits: `.\scripts\run-prod-local.ps1` (it applies Azure's 0.5 CPU / 1 GiB).
 - **One copy maximum**: rate limits are kept in memory, so `maxReplicas` is 1. Scaling out needs a
   shared store (e.g. Redis) first.

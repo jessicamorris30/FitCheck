@@ -5,6 +5,7 @@ import com.fitcheck.clothing.dto.ClothingItemResponse;
 import com.fitcheck.common.exception.BadRequestException;
 import com.fitcheck.common.exception.NotFoundException;
 import com.fitcheck.storage.BlobStorageService;
+import com.fitcheck.storage.ImageTooLargeException;
 import com.fitcheck.storage.ImageType;
 import com.fitcheck.storage.ThumbnailService;
 import com.fitcheck.user.User;
@@ -64,6 +65,8 @@ public class ClothingService {
         byte[] thumbnail;
         try {
             thumbnail = thumbnails.toJpeg(original, ThumbnailService.THUMBNAIL_SIZE);
+        } catch (ImageTooLargeException e) {
+            throw new BadRequestException("That photo has too many pixels (max 100 megapixels). Please use a smaller one.");
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("We couldn't read that image. Please try a different photo.");
         }
