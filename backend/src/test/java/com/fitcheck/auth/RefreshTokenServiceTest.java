@@ -60,15 +60,59 @@ class RefreshTokenServiceTest {
         assertThat(current.isRevoked()).isFalse();
     }
 
+    /** The same service, with a clock this far in the future. */
+    private RefreshTokenService later(Duration by) {
+        return new RefreshTokenService(tokens, properties, Clock.offset(Clock.systemUTC(), by));
+    }
+
+    private boolean isRevoked(String rawToken) {
+        return tokens.findByTokenHash(SecureTokens.sha256(rawToken)).orElseThrow().isRevoked();
+    }
+
     @Test
     void reuseRevokesEveryTokenInTheFamily() {
         var first = service.issue(newUser());
         var second = service.rotate(first.value());
 
-        assertThatThrownBy(() -> service.rotate(first.value())).isInstanceOf(UnauthorizedException.class);
+        // The stolen first token is replayed a minute later, long after the two-tab grace period.
+        assertThatThrownBy(() -> later(Duration.ofMinutes(1)).rotate(first.value()))
+                .isInstanceOf(UnauthorizedException.class);
 
-        RefreshToken current = tokens.findByTokenHash(SecureTokens.sha256(second.value())).orElseThrow();
-        assertThat(current.isRevoked()).isTrue();
+        assertThat(isRevoked(second.value())).isTrue();
+    }
+
+    @Test
+    void twoTabsRefreshingTogetherBothStayLoggedIn() {
+        var first = service.issue(newUser());
+        var tabA = service.rotate(first.value());
+        // Tab B sent the same (now replaced) token a moment later: it gets its own new token...
+        var tabB = service.rotate(first.value());
+
+        assertThat(tabB.value()).isNotEqualTo(tabA.value());
+        assertThat(isRevoked(tabA.value())).isFalse();
+        assertThat(isRevoked(tabB.value())).isFalse();
+        // ...and both keep working: nothing was treated as theft.
+        service.rotate(tabB.value());
+        service.rotate(tabA.value());
+    }
+
+    @Test
+    void graceEndsAfterAFewSeconds() {
+        var first = service.issue(newUser());
+        service.rotate(first.value());
+
+        assertThatThrownBy(() -> later(RefreshTokenService.TWO_TAB_GRACE.plusSeconds(1)).rotate(first.value()))
+                .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void noGraceAfterLogout() {
+        var first = service.issue(newUser());
+        var second = service.rotate(first.value());
+        service.revoke(second.value()); // logged out right after refreshing
+
+        // The old token must not bring the session back, even within the grace period.
+        assertThatThrownBy(() -> service.rotate(first.value())).isInstanceOf(UnauthorizedException.class);
     }
 
     @Test

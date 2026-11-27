@@ -5,7 +5,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.Cookie;
+import java.time.Duration;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +33,9 @@ class RefreshFlowTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @PersistenceContext
+    private EntityManager em;
 
     @Test
     void loginSetsSecureRefreshCookie() throws Exception {
@@ -62,11 +69,27 @@ class RefreshFlowTest {
     void reusingAnOldTokenRevokesTheWholeSession() throws Exception {
         String first = cookieValue(registerAndLogin("reuse@example.com"));
         String second = cookieValue(refresh(first).andExpect(status().isOk()).andReturn().getResponse());
+        // Make the first refresh look a minute old, past the two-tab grace period.
+        em.createQuery("update RefreshToken t set t.revokedAt = :then where t.revokedAt is not null")
+                .setParameter("then", Instant.now().minus(Duration.ofMinutes(1))).executeUpdate();
+        em.clear(); // forget the cached copies so the next request reads the changed time
 
         // An attacker replays the stolen first token → rejected...
         refresh(first).andExpect(status().isUnauthorized());
         // ...and the real user's current token stops working too: the family is revoked.
         refresh(second).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void twoTabsRefreshingAtOnceDontLogTheUserOut() throws Exception {
+        String shared = cookieValue(registerAndLogin("tabs@example.com"));
+
+        // Both tabs send the same cookie at the same moment; the second arrives just after the first.
+        String tabA = cookieValue(refresh(shared).andExpect(status().isOk()).andReturn().getResponse());
+        String tabB = cookieValue(refresh(shared).andExpect(status().isOk()).andReturn().getResponse());
+
+        refresh(tabA).andExpect(status().isOk());
+        refresh(tabB).andExpect(status().isOk());
     }
 
     @Test

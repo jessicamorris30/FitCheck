@@ -32,6 +32,7 @@ Set-Cookie: fitcheck_refresh=<token>; HttpOnly; Secure; SameSite=Strict; Path=/a
 1. Read the cookie, hash it, and look up the row.
 2. If the token is missing or expired, return `401` and clear the cookie.
 3. **If it has already been revoked (reuse detected)**, revoke every token in the `family_id`, return `401` and clear the cookie. Someone replayed an old token, so the whole session is ended.
+   *Exception (two tabs):* a token swapped less than 10 seconds ago, whose replacement is still active, gets another new token in the same family instead. All tabs share one cookie, so two tabs refreshing at the same moment send the same token. After a logout or password change the replacement is revoked, so this exception no longer applies.
 4. Otherwise, revoke the current row, create a new token in the same family (`replaced_by` points to it), set the new cookie and return a new access token.
 
 **Logout**: revoke the family, clear the cookie (`Max-Age=0`) and return `204`. The frontend drops its in-memory access token.

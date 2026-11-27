@@ -46,8 +46,8 @@
 - [x] Monitoring: alerts, budget, saved log searches; [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Later
-- [ ] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) can trip
-      refresh-token reuse detection and log the user out: allow the just-replaced token for a few seconds
+- [x] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) no longer trip
+      refresh-token reuse detection: a just-replaced token works for 10 more seconds
 - [ ] Decode large photos at reduced size (ImageIO subsampling) to cut upload memory (~50 MB per phone photo today)
 - [ ] Faster cold starts (Spring AOT/CDS) or one always-on copy
 - [ ] Managed identity for storage (user delegation SAS) and Key Vault for secrets

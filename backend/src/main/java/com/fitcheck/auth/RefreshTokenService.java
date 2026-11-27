@@ -4,6 +4,7 @@ import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
 import com.fitcheck.user.User;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -24,6 +25,8 @@ public class RefreshTokenService {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
     private static final String INVALID = "Invalid or expired session";
+    /** How long a just-rotated token still works, for two tabs refreshing together. */
+    static final Duration TWO_TAB_GRACE = Duration.ofSeconds(10);
 
     private final RefreshTokenRepository tokens;
     private final JwtProperties properties;
@@ -59,6 +62,12 @@ public class RefreshTokenService {
         RefreshToken current = tokens.findByTokenHash(SecureTokens.sha256(rawToken))
                 .orElseThrow(() -> new UnauthorizedException(INVALID));
 
+        if (current.isRevoked() && isTwoTabRace(current, now)) {
+            // Not a thief: another tab of the same browser refreshed a moment ago (see TWO_TAB_GRACE).
+            log.info("Refresh token reused within {}s of rotation (two tabs?); issuing another token in family {}",
+                    TWO_TAB_GRACE.toSeconds(), current.getFamilyId());
+            return create(current.getUser(), current.getFamilyId()).issued();
+        }
         if (current.isRevoked()) {
             int revoked = tokens.revokeFamily(current.getFamilyId(), now);
             log.warn("Refresh token reuse detected for user {}; revoked {} token(s) in family {}",
@@ -72,6 +81,23 @@ public class RefreshTokenService {
         Created next = create(current.getUser(), current.getFamilyId());
         current.rotateTo(next.entity().getId(), now);
         return next.issued();
+    }
+
+    /**
+     * Was this token swapped for a new one only moments ago, and is that new one still active?
+     *
+     * <p>All tabs of a browser share ONE cookie. When two tabs refresh at the same moment (e.g. an
+     * email link opened in a new tab), both send the same token: the first swaps it, and the second
+     * would look exactly like a replayed stolen token and log the user out everywhere. So the
+     * old token is accepted for a few more seconds, but only while its replacement is still active:
+     * after a logout, password change or detected theft the replacement is revoked too, and the old
+     * token is refused. A thief would need the token AND to use it within seconds of the real user.
+     */
+    private boolean isTwoTabRace(RefreshToken token, Instant now) {
+        return token.getReplacedBy() != null
+                && !token.isExpired(now)
+                && now.isBefore(token.getRevokedAt().plus(TWO_TAB_GRACE))
+                && tokens.findById(token.getReplacedBy()).filter(next -> !next.isRevoked()).isPresent();
     }
 
     /** Logout: retires the whole family. Unknown or already-revoked tokens are simply ignored. */
