@@ -97,9 +97,13 @@ Or from a terminal: `az containerapp logs show -g rg-fitcheck -n fitcheck --tail
 
 ## Known limits (accepted for now)
 
-- **Cold start**: after a few quiet minutes the app scales to zero, and the next visitor waits about
-  40 seconds while it starts. Options: keep one copy running (`minReplicas: 1`, costs more each month)
-  or Spring AOT/CDS to start faster.
+- **Cold start**: after a few quiet minutes the app scales to zero, and the next visitor waits while
+  Azure finds a machine, downloads the image (~6 s) and starts the app. Since v1.1 the image carries a
+  Java startup cache (made during `docker build`, see the Dockerfile) and the health checks run every
+  3 s, which together cut the wait a lot (it was ~43 s). Keeping one copy always running
+  (`minReplicas: 1`) would remove the wait but costs ~$14 CAD/month, more than the student credit lasts.
+  If a startup ever fails after a change, check the build log for the "AOTCache creation is
+  complete" line, and the startup probe in main.bicep (Azure gives up after ~33 s).
 - **Memory**: the container has 1 GiB and Java's heap may use 60% of it (Dockerfile
   `JAVA_TOOL_OPTIONS`). The container sits around 950 MiB under heavy photo uploads: Java claims its
   whole heap allowance up front. What matters is the heap actually in use, which stays below about

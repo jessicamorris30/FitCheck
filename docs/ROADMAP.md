@@ -51,7 +51,8 @@
 - [x] Lighter photo uploads: rotate after shrinking (~95 → ~48 MB per phone photo), at most 2 processed
       at once, images over 100 megapixels refused. (Decoding at reduced size was tried and rejected:
       Java can only skip pixels, which made striped and knit fabrics change colour in thumbnails.)
-- [ ] Faster cold starts (Spring AOT/CDS) or one always-on copy
+- [x] Faster cold starts (v1.1): Java 25 startup cache built into the image (app start 85 s → 34 s
+      under the same CPU limit locally) and health checks every 3 s instead of 10-15 s
 - [ ] Managed identity for storage (user delegation SAS) and Key Vault for secrets
 - [ ] CDN for photos
 - [ ] HEIC (iPhone) photos, tag search, pagination for large wardrobes

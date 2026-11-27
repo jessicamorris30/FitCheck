@@ -269,11 +269,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (!empty(appImage)) {
           ]
           probes: [
             {
-              // Java needs a while to start on half a CPU: allow up to ~2 minutes.
+              // Checked every 3 s so a visitor waiting on a cold start gets in as soon as the app is
+              // up (it starts in ~5 s with the startup cache). Up to 10 misses are allowed (Azure's
+              // maximum): 3 + 10 × 3 = ~33 s before Azure gives up and restarts it.
+              // (Was: first check after 10 s, then every 10 s: up to 10 s of pure waiting.)
               type: 'Startup'
               httpGet: { path: '/actuator/health/liveness', port: 8080 }
-              initialDelaySeconds: 10
-              periodSeconds: 10
+              initialDelaySeconds: 3
+              periodSeconds: 3
               failureThreshold: 10
             }
             {
@@ -285,8 +288,9 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = if (!empty(appImage)) {
             {
               type: 'Readiness' // not ready (e.g. database down)? stop sending it visitors
               httpGet: { path: '/actuator/health/readiness', port: 8080 }
-              periodSeconds: 15
-              failureThreshold: 3
+              // Visitors are only let in after this passes, so check often (was every 15 s).
+              periodSeconds: 3
+              failureThreshold: 5
             }
           ]
         }
