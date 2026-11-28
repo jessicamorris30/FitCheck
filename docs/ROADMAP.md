@@ -31,14 +31,14 @@
 - [x] Guard rails: confirmed email required, 20 requests per user per day, refunds when the AI fails
 - [x] Frontend: Ask the AI stylist panel and suggestion cards; Use this outfit, then save with a ✨ AI badge
 
-## Phase 6: Outfit calendar (in progress)
+## Phase 6: Outfit calendar ✅ (v1.2.0)
 Put saved outfits on specific days ("wear this on Friday"); several per day; past days double as a
 "what I wore" history.
 - [x] 6.1 Backend: `planned_outfits` table (V6), `CalendarService`, `/api/calendar` (list a range, plan, remove)
 - [x] 6.2 Calendar page: week view (Mon–Sun, week kept in the address), add/remove outfits, nav link
 - [x] 6.3 Month view (tap a day to open its week); "On your calendar" on outfit pages: Plan this
       outfit, upcoming days, last worn (`GET /api/calendar/outfits/{id}`)
-- [ ] 6.4 Polish (phone layout, empty states), release v1.2
+- [x] 6.4 Polish (compact empty days on phones, empty-week hint, docs), release v1.2
 
 ## Phase 5: Polish and launch ✅ (v1.0.0, live at https://fitcheckwardrobe.com)
 - [x] Account: change password, forgot/reset password, delete account (with all photos)

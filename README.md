@@ -8,6 +8,7 @@ FitCheck is a web app for digitizing your wardrobe and planning outfits.
 - **Upload photos** of your clothes to build a digital wardrobe.
 - **Browse** your wardrobe by category.
 - **Plan mode**: put outfits together yourself, or ask AI (Claude) to suggest outfits from your own clothes based on a text or image prompt describing the aesthetic you want.
+- **Calendar**: put saved outfits on days ("wear this on Friday"), several per day, in a week or month view; past days show what you wore.
 
 ## Tech stack
 

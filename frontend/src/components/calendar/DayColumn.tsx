@@ -21,20 +21,26 @@ export default function DayColumn({ day, isToday, entries, removing, onAdd, onRe
   const weekday = day.toLocaleDateString(undefined, { weekday: 'short' })
   const longLabel = day.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
 
+  // On phones/tablets an empty day is one compact row ("Tue 1 ........ + Add") so a week doesn't
+  // take several screens of scrolling; on desktop every day stays a full column.
+  const empty = entries.length === 0
+  const layout = empty ? 'flex-row items-center lg:flex-col lg:items-stretch' : 'flex-col'
+
   return (
     <section
       aria-label={longLabel + (isToday ? ' (today)' : '')}
-      className={`flex flex-col gap-2 rounded-xl border p-3 ${isToday ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}
+      className={`flex gap-2 rounded-xl border p-3 ${layout} ${isToday ? 'border-gray-900 bg-gray-50' : 'border-gray-200'}`}
     >
-      <header className="flex items-baseline justify-between">
+      <header className="flex flex-1 items-baseline justify-between gap-2 lg:flex-none">
         <span className="text-sm text-gray-500">
           {weekday} <span className={`text-base font-semibold ${isToday ? 'text-gray-900' : 'text-gray-700'}`}>{day.getDate()}</span>
         </span>
         {isToday && <span className="rounded-full bg-gray-900 px-2 py-0.5 text-xs font-medium text-white">Today</span>}
       </header>
 
-      <ul className="flex flex-col gap-2">
-        {entries.map((entry) => (
+      {!empty && (
+        <ul className="flex flex-col gap-2">
+          {entries.map((entry) => (
           // Phone/tablet: a row (small photo, name, ×). In the 7-column desktop week the columns are
           // narrow, so the photo goes on top with the full name underneath instead.
           <li key={entry.id} className="relative flex items-center gap-2 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-100 lg:flex-col lg:items-stretch">
@@ -57,16 +63,26 @@ export default function DayColumn({ day, isToday, entries, removing, onAdd, onRe
               ×
             </button>
           </li>
-        ))}
-      </ul>
+          ))}
+        </ul>
+      )}
 
       <button
         type="button"
         onClick={onAdd}
         aria-label={`Add an outfit to ${longLabel}`}
-        className="rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-sm text-gray-500 hover:border-gray-900 hover:text-gray-900"
+        className={`rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-sm text-gray-500 hover:border-gray-900 hover:text-gray-900 ${
+          empty ? 'shrink-0 px-3 lg:px-2' : ''
+        }`}
       >
-        + Add outfit
+        {/* Compact rows only have room for "+ Add"; the full text where there's space. */}
+        {empty ? (
+          <>
+            + Add<span className="hidden lg:inline"> outfit</span>
+          </>
+        ) : (
+          '+ Add outfit'
+        )}
       </button>
     </section>
   )

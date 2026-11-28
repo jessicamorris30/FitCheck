@@ -15,7 +15,8 @@ export default function Layout() {
       </a>
       <Navbar />
       <VerifyEmailBanner />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 outline-none">
+      {/* pb-10: room at the very bottom so the fixed version tag never sits on top of content. */}
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-6 pb-10 outline-none">
         <Outlet />
       </main>
     </div>

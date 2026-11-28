@@ -88,6 +88,13 @@ export default function WeekView({ today }: { today: string }) {
         </p>
       )}
 
+      {current && !current.error && current.entries.length === 0 && (
+        <p className="text-sm text-gray-500">
+          Nothing planned this week yet. Tap <span className="font-medium text-gray-700">+ Add</span> on any day, or use{' '}
+          <span className="font-medium text-gray-700">Plan this outfit</span> on an outfit's page.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7" aria-busy={current === null}>
         {days.map((day) => {
           const iso = toIsoDay(day)

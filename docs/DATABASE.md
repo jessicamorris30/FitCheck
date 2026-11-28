@@ -14,6 +14,8 @@ erDiagram
   users ||--o{ outfits : owns
   outfits ||--o{ outfit_items : contains
   clothing_items ||--o{ outfit_items : "used in"
+  users ||--o{ planned_outfits : plans
+  outfits ||--o{ planned_outfits : "planned on"
 
   users {
     uuid id PK
@@ -59,6 +61,13 @@ erDiagram
     uuid outfit_id PK,FK
     uuid clothing_item_id PK,FK
     int position
+  }
+  planned_outfits {
+    uuid id PK
+    uuid user_id FK
+    uuid outfit_id FK "unique with day"
+    date day "plain day, no time zone"
+    timestamptz created_at "order within a day"
   }
 ```
 

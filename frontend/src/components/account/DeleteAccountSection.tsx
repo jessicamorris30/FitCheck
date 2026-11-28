@@ -68,7 +68,7 @@ export default function DeleteAccountSection() {
             <ul className="mt-2 list-disc pl-5">
               <li>your account and login</li>
               <li>every clothing item and all of your photos</li>
-              <li>all of your saved outfits</li>
+              <li>all of your saved outfits and your calendar</li>
             </ul>
             <p className="mt-2 font-medium">This can't be undone.</p>
           </div>

@@ -37,7 +37,7 @@ Errors use one shape (`ApiError`):
 | GET | `/users/me` | `UserResponse` `{ id, email, emailVerified, createdAt }` |
 | DELETE | `/users/me` | Body `{ password }`. `204`: the account and everything in it are deleted (database rows by cascade; files under `users/<id>/` after commit) and the refresh cookie is cleared. `400` with `fieldErrors.password` if the password is wrong |
 | POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
-| DELETE | `/users/me` | `204` (deletes the account, all items, outfits and blobs) |
+| DELETE | `/users/me` | `204` (deletes the account, all items, outfits, calendar and blobs) |
 
 ## Clothing
 
@@ -64,6 +64,19 @@ Errors use one shape (`ApiError`):
 | DELETE | `/outfits/{id}` | none | `204` (clothes are not affected) |
 
 `OutfitResponse`: `{ id, name, notes, aiPrompt, items: ClothingItemResponse[], createdAt, updatedAt }`. `aiPrompt` is set when the outfit came from the AI stylist.
+
+## Calendar
+
+Saved outfits put on days. Dates are plain days, `"YYYY-MM-DD"`, with no time zone. A day can hold several different outfits (at most 10), shown in the order added. Only your own outfits; dates 2000-2100.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/calendar?from=2026-11-30&to=2026-12-06` | none | `PlannedOutfitResponse[]` by day, then order added (both days included, at most 62 days) |
+| GET | `/calendar/outfits/{outfitId}` | none | `[{ id, date }]`: every day that outfit is on, earliest first (`404` if not yours) |
+| POST | `/calendar` | `{ date, outfitId }` | `201 PlannedOutfitResponse` (`404` outfit not yours, `409` already on that day, `400` day full or bad date) |
+| DELETE | `/calendar/{id}` | none | `204` (takes it off the day; the outfit stays) |
+
+`PlannedOutfitResponse`: `{ id, date, outfit: OutfitResponse }`. `id` is the calendar entry's own id. Deleting an outfit (or the account) removes its calendar entries.
 
 ## AI stylist
 
