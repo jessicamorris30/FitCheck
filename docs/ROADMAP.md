@@ -65,6 +65,18 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
 - [x] 7.7 Polish and release v1.3: "Using your saved style" hint in the stylist panel, privacy note
       mentions the style notes
 
+## Phase 8: Admin (in progress)
+Admin = an account whose email is in the server's ADMIN_EMAILS setting (never in the repo) AND confirmed.
+- [x] 8.1 Foundation: admin check, `/api/admin` hidden from everyone else (404 like an unknown page),
+      frozen accounts cut off immediately (login, session refresh and every request), last login /
+      last active, admin audit log (V10), no AI limits for admins (usage still recorded)
+- [ ] 8.2 2-step login (authenticator app) for admin, re-type password for destructive actions
+- [ ] 8.3 User management: list (everything but passwords, plus counts), freeze/unfreeze, force password
+      reset, sign out everywhere, resend confirmation, delete; users are emailed
+- [ ] 8.4 Admin screens
+- [ ] 8.5 Monitoring: AI tokens and estimated cost, dashboard, audit log view
+- [ ] 8.6 ADMIN_EMAILS in Azure, polish, release v1.4
+
 ## Later
 - [x] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) no longer trip
       refresh-token reuse detection: a just-replaced token works for 10 more seconds

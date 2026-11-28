@@ -13,6 +13,8 @@ import com.fitcheck.auth.dto.VerifyEmailRequest;
 import com.fitcheck.common.exception.ApiError;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
+import com.fitcheck.admin.AdminAccess;
+import com.fitcheck.user.User;
 import com.fitcheck.user.UserService;
 import com.fitcheck.user.dto.UserResponse;
 import jakarta.servlet.http.Cookie;
@@ -45,14 +47,16 @@ public class AuthController {
     private final PasswordResetService passwordReset;
     private final JwtProperties jwt;
     private final UserService userService;
+    private final AdminAccess adminAccess;
 
     public AuthController(AuthService authService, EmailVerificationService emailVerification,
-            PasswordResetService passwordReset, JwtProperties jwt, UserService userService) {
+            PasswordResetService passwordReset, JwtProperties jwt, UserService userService, AdminAccess adminAccess) {
         this.authService = authService;
         this.emailVerification = emailVerification;
         this.passwordReset = passwordReset;
         this.jwt = jwt;
         this.userService = userService;
+        this.adminAccess = adminAccess;
     }
 
     /**
@@ -107,7 +111,8 @@ public class AuthController {
      */
     @PostMapping("/verify-email")
     public UserResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        return UserResponse.from(emailVerification.verify(request.token()));
+        User verified = emailVerification.verify(request.token());
+        return UserResponse.from(verified, adminAccess.isAdmin(verified));
     }
 
     /**

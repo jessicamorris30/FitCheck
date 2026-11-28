@@ -1,10 +1,12 @@
 package com.fitcheck.style;
 
+import com.fitcheck.admin.AdminAccess;
 import com.fitcheck.storage.BlobStorageService;
 import com.fitcheck.stylist.AiRefusedException;
 
 import com.fitcheck.stylist.StylistClient;
 import com.fitcheck.stylist.StylistModels.StyleSample;
+import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -67,10 +69,11 @@ public class StyleDescriber {
     private final TransactionTemplate tx;
     private final Clock clock;
     private final Duration delay;
+    private final AdminAccess adminAccess;
 
     public StyleDescriber(UserStyleRepository styles, StyleImageRepository photos, UserRepository users,
             BlobStorageService storage, StylistClient stylist, PlatformTransactionManager transactions, Clock clock,
-            @Value("${fitcheck.style.describe-delay:5s}") Duration delay) {
+            @Value("${fitcheck.style.describe-delay:5s}") Duration delay, AdminAccess adminAccess) {
         this.styles = styles;
         this.photos = photos;
         this.users = users;
@@ -79,6 +82,7 @@ public class StyleDescriber {
         this.tx = new TransactionTemplate(transactions);
         this.clock = clock;
         this.delay = delay;
+        this.adminAccess = adminAccess;
     }
 
     /** After a style change is saved: wait a moment (more changes may follow), then write the notes. */
@@ -135,10 +139,12 @@ public class StyleDescriber {
                 style.setDescription(null, style.getVersion()); // nothing left to describe
                 return Outcome.CLEARED;
             }
-            if (!users.findById(userId).map(u -> u.isEmailVerified()).orElse(false)) {
+            User owner = users.findById(userId).orElse(null);
+            if (owner == null || !owner.isEmailVerified()) {
                 return Outcome.SKIPPED_UNCONFIRMED;
             }
-            if (style.descriptionsOn(today) >= DAILY_LIMIT) {
+            // Admins have no daily cap (Phase 8).
+            if (style.descriptionsOn(today) >= DAILY_LIMIT && !adminAccess.isAdmin(owner)) {
                 return Outcome.SKIPPED_DAILY_LIMIT;
             }
             return new Plan(style.getVersion(), blobs, style.getNote());

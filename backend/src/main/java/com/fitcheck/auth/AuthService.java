@@ -5,6 +5,7 @@ import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
 import com.fitcheck.common.exception.ConflictException;
 import com.fitcheck.common.exception.FieldErrorException;
+import com.fitcheck.common.exception.ForbiddenException;
 import com.fitcheck.security.LoginAttemptService;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.user.ProfileRules;
@@ -12,6 +13,8 @@ import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
 import com.fitcheck.user.UserService;
 import com.fitcheck.user.dto.UserResponse;
+import com.fitcheck.admin.AdminAccess;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS = "Invalid email, username or password";
+    static final String SUSPENDED = "This account has been suspended. If you think this is a mistake, please get in touch.";
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
@@ -37,6 +41,7 @@ public class AuthService {
     private final EmailVerificationService emailVerification;
     private final LoginAttemptService loginAttempts;
     private final UserService userService;
+    private final AdminAccess adminAccess;
 
     /** A real BCrypt hash of a random string; only used to equalize login timing (see login). */
     private final String dummyHash;
@@ -44,7 +49,7 @@ public class AuthService {
     // Spring sees this constructor and passes in the matching beans ("dependency injection").
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
             RefreshTokenService refreshTokens, EmailVerificationService emailVerification,
-            LoginAttemptService loginAttempts, UserService userService) {
+            LoginAttemptService loginAttempts, UserService userService, AdminAccess adminAccess) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -52,6 +57,7 @@ public class AuthService {
         this.emailVerification = emailVerification;
         this.loginAttempts = loginAttempts;
         this.userService = userService;
+        this.adminAccess = adminAccess;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -128,6 +134,12 @@ public class AuthService {
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
         loginAttempts.recordSuccess(lockKey);
+        // Checked only AFTER the right password, so a password guesser can't learn that an
+        // account exists and is frozen.
+        if (user.isFrozen()) {
+            throw new ForbiddenException(SUSPENDED);
+        }
+        user.recordLogin(Instant.now());
         return startSession(user);
     }
 
@@ -138,7 +150,8 @@ public class AuthService {
      */
     @Transactional(noRollbackFor = UnauthorizedException.class)
     public AuthSession refresh(String refreshToken) {
-        RefreshTokenService.IssuedToken next = refreshTokens.rotate(refreshToken);
+        RefreshTokenService.IssuedToken next = refreshTokens.rotate(refreshToken); // refuses frozen accounts
+        next.user().recordActivity(Instant.now());
         return new AuthSession(accessFor(next.user()), next.value());
     }
 
@@ -183,7 +196,7 @@ public class AuthService {
 
     private AuthResponse accessFor(User user) {
         String accessToken = jwtService.createAccessToken(user.getId(), user.getEmail());
-        return new AuthResponse(accessToken, jwtService.accessTokenTtlSeconds(), UserResponse.from(user));
+        return new AuthResponse(accessToken, jwtService.accessTokenTtlSeconds(), UserResponse.from(user, adminAccess.isAdmin(user)));
     }
 
     /** " Ada@Example.COM " → "ada@example.com", so each address is stored one way. */

@@ -1,5 +1,6 @@
 package com.fitcheck.config;
 
+import com.fitcheck.admin.FrozenAccounts;
 import com.fitcheck.auth.JwtAuthenticationFilter;
 import com.fitcheck.auth.JwtService;
 import com.fitcheck.common.exception.ApiError;
@@ -42,11 +43,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JsonMapper jsonMapper, JwtService jwtService,
-            RateLimiter rateLimiter, @Value("${fitcheck.rate-limit.enabled:true}") boolean rateLimitEnabled)
+            RateLimiter rateLimiter, @Value("${fitcheck.rate-limit.enabled:true}") boolean rateLimitEnabled,
+            FrozenAccounts frozenAccounts)
             throws Exception {
         http
                 // Check "Authorization: Bearer <jwt>" before Spring's own authentication filters.
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthenticationFilter(jwtService, frozenAccounts), UsernamePasswordAuthenticationFilter.class)
                 // And before even that: turn away floods of login/sign-up/reset attempts (429).
                 .addFilterBefore(new RateLimitFilter(rateLimiter, jsonMapper, rateLimitEnabled), JwtAuthenticationFilter.class)
                 .cors(Customizer.withDefaults()) // uses the CorsConfigurationSource bean from CorsConfig

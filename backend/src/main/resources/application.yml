@@ -95,6 +95,11 @@ fitcheck:
     # Optional; see StorageProperties. Empty on Azure.
     public-endpoint: ${AZURE_STORAGE_PUBLIC_ENDPOINT:}
 
+  admin:
+    # Who is admin: a comma-separated list of emails, set on the server (Azure), never in the repo.
+    # An account is admin only if its email is listed AND confirmed. Blank = no admins.
+    emails: ${ADMIN_EMAILS:}
+
   ai:
     # Blank = AI stylist switched off (the rest of the app works normally).
     api-key: ${ANTHROPIC_API_KEY:}

@@ -24,4 +24,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByUsernameIgnoreCase(String username);
 
     boolean existsByUsernameIgnoreCase(String username);
+
+    /** Ids of all frozen accounts (loaded once at startup by FrozenAccounts). */
+    @org.springframework.data.jpa.repository.Query("select u.id from User u where u.frozenAt is not null")
+    java.util.List<UUID> findFrozenIds();
 }

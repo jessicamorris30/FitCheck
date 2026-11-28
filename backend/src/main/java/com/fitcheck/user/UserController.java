@@ -1,5 +1,6 @@
 package com.fitcheck.user;
 
+import com.fitcheck.admin.AdminAccess;
 import com.fitcheck.auth.AuthenticatedUser;
 import com.fitcheck.auth.EmailVerificationService;
 import com.fitcheck.config.JwtProperties;
@@ -33,13 +34,20 @@ public class UserController {
     private final EmailVerificationService emailVerification;
     private final AccountDeletionService accountDeletion;
     private final JwtProperties jwt;
+    private final AdminAccess adminAccess;
 
     public UserController(UserService userService, EmailVerificationService emailVerification,
-            AccountDeletionService accountDeletion, JwtProperties jwt) {
+            AccountDeletionService accountDeletion, JwtProperties jwt, AdminAccess adminAccess) {
         this.userService = userService;
         this.emailVerification = emailVerification;
         this.accountDeletion = accountDeletion;
         this.jwt = jwt;
+        this.adminAccess = adminAccess;
+    }
+
+    /** The user as the browser sees them, including whether they're an admin (Phase 8). */
+    private UserResponse response(User user) {
+        return UserResponse.from(user, adminAccess.isAdmin(user));
     }
 
     /**
@@ -51,7 +59,7 @@ public class UserController {
      */
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal AuthenticatedUser me) {
-        return UserResponse.from(userService.getById(me.id()));
+        return response(userService.getById(me.id()));
     }
 
     /**
@@ -62,7 +70,7 @@ public class UserController {
     @PutMapping("/me/profile")
     public UserResponse updateProfile(@AuthenticationPrincipal AuthenticatedUser me,
             @Valid @RequestBody ProfileRequest request) {
-        return UserResponse.from(userService.updateProfile(me.id(), request));
+        return response(userService.updateProfile(me.id(), request));
     }
 
     /**
@@ -72,7 +80,7 @@ public class UserController {
     @PutMapping("/me/preferences")
     public UserResponse updatePreferences(@AuthenticationPrincipal AuthenticatedUser me,
             @Valid @RequestBody PreferencesRequest request) {
-        return UserResponse.from(userService.updateTheme(me.id(), request.theme()));
+        return response(userService.updateTheme(me.id(), request.theme()));
     }
 
     /**

@@ -13,6 +13,9 @@ import java.util.UUID;
  * @param profileComplete false until username, first and last name are all set (the app then
  *                        asks for them before anything else)
  * @param theme           "system", "light" or "dark"; null if never chosen (= follow the device)
+ * @param admin           whether this is an admin account (Phase 8), so the app can show the Admin
+ *                        link. Only ever about the user themselves; the server checks again on
+ *                        every admin request.
  */
 public record UserResponse(
         UUID id,
@@ -22,12 +25,14 @@ public record UserResponse(
         String lastName,
         boolean profileComplete,
         String theme,
+        boolean admin,
         boolean emailVerified,
         Instant createdAt) {
 
-    public static UserResponse from(User user) {
+    /** @param admin from AdminAccess.isAdmin(user): callers must decide, so it's never left out by mistake */
+    public static UserResponse from(User user, boolean admin) {
         return new UserResponse(user.getId(), user.getEmail(), user.getUsername(), user.getFirstName(),
-                user.getLastName(), user.isProfileComplete(), user.getTheme(), user.isEmailVerified(),
+                user.getLastName(), user.isProfileComplete(), user.getTheme(), admin, user.isEmailVerified(),
                 user.getCreatedAt());
     }
 }

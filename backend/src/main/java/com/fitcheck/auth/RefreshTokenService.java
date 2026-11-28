@@ -77,6 +77,11 @@ public class RefreshTokenService {
         if (current.isExpired(now)) {
             throw new UnauthorizedException(INVALID);
         }
+        if (current.getUser().isFrozen()) {
+            // Suspended by an admin: end this session for good (the login page then explains why).
+            tokens.revokeFamily(current.getFamilyId(), now);
+            throw new UnauthorizedException(INVALID);
+        }
 
         Created next = create(current.getUser(), current.getFamilyId());
         current.rotateTo(next.entity().getId(), now);

@@ -9,6 +9,8 @@ export interface User {
   lastName: string | null
   /** False until username, first and last name are set; the app asks for them first. */
   profileComplete: boolean
+  /** Admin account (Phase 8): shows the Admin link. The server checks again on every admin request. */
+  admin: boolean
   /** Light/dark choice saved on the account; null if never chosen (follow the device). */
   theme: 'system' | 'light' | 'dark' | null
   /** True once the user clicked the link in their confirmation email. */
@@ -137,4 +139,6 @@ export interface AiUsage {
   limit: number
   remaining: number
   resetsAt: string
+  /** Admins (Phase 8) have no daily limit. */
+  unlimited: boolean
 }

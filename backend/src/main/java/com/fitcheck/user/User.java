@@ -44,6 +44,21 @@ public class User {
     @Column(length = 10)
     private String theme;
 
+    /** When an admin suspended the account (V10); null = active. */
+    @Column(name = "frozen_at")
+    private Instant frozenAt;
+
+    @Column(name = "frozen_reason", columnDefinition = "text")
+    private String frozenReason;
+
+    /** Last successful password login. */
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
+    /** Last time the app was used (a login or a session refresh, every ~15 minutes while active). */
+    @Column(name = "last_active_at")
+    private Instant lastActiveAt;
+
     /** When the user clicked the link in their confirmation email; null until then. */
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -98,6 +113,48 @@ public class User {
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
+    }
+
+    public boolean isFrozen() {
+        return frozenAt != null;
+    }
+
+    public Instant getFrozenAt() {
+        return frozenAt;
+    }
+
+    public String getFrozenReason() {
+        return frozenReason;
+    }
+
+    /** Suspends the account (admin). */
+    public void freeze(String reason, Instant now) {
+        this.frozenAt = now;
+        this.frozenReason = reason;
+    }
+
+    public void unfreeze() {
+        this.frozenAt = null;
+        this.frozenReason = null;
+    }
+
+    public Instant getLastLoginAt() {
+        return lastLoginAt;
+    }
+
+    public Instant getLastActiveAt() {
+        return lastActiveAt;
+    }
+
+    /** A successful password login (also counts as activity). */
+    public void recordLogin(Instant now) {
+        this.lastLoginAt = now;
+        this.lastActiveAt = now;
+    }
+
+    /** The app was used (session refreshed). */
+    public void recordActivity(Instant now) {
+        this.lastActiveAt = now;
     }
 
     public String getTheme() {

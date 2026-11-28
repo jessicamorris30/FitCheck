@@ -1,5 +1,6 @@
 package com.fitcheck.ai;
 
+import com.fitcheck.admin.AdminAccess;
 import com.fitcheck.common.exception.ForbiddenException;
 import com.fitcheck.common.exception.TooManyRequestsException;
 import com.fitcheck.config.AiProperties;
@@ -30,23 +31,34 @@ public class AiUsageService {
     private final UserService users;
     private final AiProperties properties;
     private final Clock clock;
+    private final AdminAccess adminAccess;
 
-    public AiUsageService(AiUsageRepository usage, UserService users, AiProperties properties, Clock clock) {
+    public AiUsageService(AiUsageRepository usage, UserService users, AiProperties properties, Clock clock,
+            AdminAccess adminAccess) {
         this.usage = usage;
         this.users = users;
         this.properties = properties;
         this.clock = clock;
+        this.adminAccess = adminAccess;
     }
 
-    /** What the UI shows: "n of 20 left today, resets at ...". */
-    public record UsageSummary(long used, int limit, long remaining, Instant resetsAt) {
+    /**
+     * What the UI shows: "n of 20 left today, resets at ...".
+     *
+     * @param unlimited true for admins (Phase 8): no daily limit; {@code remaining} then equals {@code limit}
+     */
+    public record UsageSummary(long used, int limit, long remaining, Instant resetsAt, boolean unlimited) {
     }
 
     @Transactional(readOnly = true)
     public UsageSummary summary(UUID userId) {
         long used = usage.countByUser_IdAndCreatedAtGreaterThanEqual(userId, startOfToday());
         int limit = properties.dailyLimit();
-        return new UsageSummary(used, limit, Math.max(0, limit - used), startOfToday().plusSeconds(24 * 60 * 60));
+        Instant resetsAt = startOfToday().plusSeconds(24 * 60 * 60);
+        if (adminAccess.isAdmin(users.getById(userId))) {
+            return new UsageSummary(used, limit, limit, resetsAt, true);
+        }
+        return new UsageSummary(used, limit, Math.max(0, limit - used), resetsAt, false);
     }
 
     /**
@@ -64,7 +76,8 @@ public class AiUsageService {
             throw new ForbiddenException("Please confirm your email to use the AI stylist.");
         }
         long used = usage.countByUser_IdAndCreatedAtGreaterThanEqual(userId, startOfToday());
-        if (used >= properties.dailyLimit()) {
+        // Admins have no daily limit. Their requests are still recorded (for the cost overview).
+        if (used >= properties.dailyLimit() && !adminAccess.isAdmin(user)) {
             throw new TooManyRequestsException(
                     "You've used all " + properties.dailyLimit() + " AI suggestions for today. Try again tomorrow.");
         }

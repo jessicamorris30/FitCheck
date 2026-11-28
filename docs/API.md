@@ -93,6 +93,18 @@ Saved outfits put on days. Dates are plain days, `"YYYY-MM-DD"`, with no time zo
 
 `PlannedOutfitResponse`: `{ id, date, outfit: OutfitResponse }`. `id` is the calendar entry's own id. Deleting an outfit (or the account) removes its calendar entries.
 
+## Admin (Phase 8)
+
+Only for admin accounts: the email must be in the server's `ADMIN_EMAILS` setting **and** confirmed (and the account not frozen). For everyone else every `/admin/**` path answers `404 No endpoint ...`, exactly like a page that doesn't exist; not logged in → `401` like the rest of the API. Checked against the database on every request.
+
+| Method | Path | Response |
+|---|---|---|
+| GET | `/admin/me` | `{ id, email, admin: true }` |
+
+Frozen accounts: login with the right password → `403` "This account has been suspended..." (a wrong password still gets the normal `401`, so guessers learn nothing); session refresh → `401`; any existing access token stops working at once.
+
+`UserResponse.admin` is `true` for the admin (to show the Admin link). `GET /ai/usage` has `unlimited: true` for admins: no daily limit (requests are still counted).
+
 ## AI stylist
 
 | Method | Path | Body | Response |

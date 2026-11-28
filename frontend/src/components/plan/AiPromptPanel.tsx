@@ -121,7 +121,7 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
     }
   }
 
-  const canSubmit = !loading && (prompt.trim().length > 0 || file !== null) && usage?.remaining !== 0
+  const canSubmit = !loading && (prompt.trim().length > 0 || file !== null) && (usage?.unlimited || usage?.remaining !== 0)
 
   return (
     <section
@@ -217,8 +217,10 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
             Get suggestions
           </Button>
           {usage && (
-            <p className={`text-center text-xs ${usage.remaining === 0 ? 'font-medium text-amber-700' : 'text-gray-500'}`}>
-              {usage.remaining} of {usage.limit} left today
+            <p
+              className={`text-center text-xs ${!usage.unlimited && usage.remaining === 0 ? 'font-medium text-amber-700' : 'text-gray-500'}`}
+            >
+              {usage.unlimited ? `Unlimited (admin) · ${usage.used} today` : `${usage.remaining} of ${usage.limit} left today`}
             </p>
           )}
         </div>
