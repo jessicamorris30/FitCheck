@@ -36,7 +36,8 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
 "what I wore" history.
 - [x] 6.1 Backend: `planned_outfits` table (V6), `CalendarService`, `/api/calendar` (list a range, plan, remove)
 - [x] 6.2 Calendar page: week view (Mon–Sun, week kept in the address), add/remove outfits, nav link
-- [ ] 6.3 Month view; "Plan this outfit" on outfit pages
+- [x] 6.3 Month view (tap a day to open its week); "On your calendar" on outfit pages: Plan this
+      outfit, upcoming days, last worn (`GET /api/calendar/outfits/{id}`)
 - [ ] 6.4 Polish (phone layout, empty states), release v1.2
 
 ## Phase 5: Polish and launch ✅ (v1.0.0, live at https://fitcheckwardrobe.com)

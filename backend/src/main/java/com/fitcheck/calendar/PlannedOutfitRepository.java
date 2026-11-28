@@ -20,6 +20,9 @@ public interface PlannedOutfitRepository extends JpaRepository<PlannedOutfit, UU
     /** One calendar entry, only if it belongs to this owner. */
     Optional<PlannedOutfit> findByIdAndOwner_Id(UUID id, UUID ownerId);
 
+    /** Every day one outfit is on, earliest first. (Callers check the outfit is the user's first.) */
+    List<PlannedOutfit> findAllByOutfit_IdOrderByDayAsc(UUID outfitId);
+
     boolean existsByOutfit_IdAndDay(UUID outfitId, LocalDate day);
 
     long countByOwner_IdAndDay(UUID ownerId, LocalDate day);

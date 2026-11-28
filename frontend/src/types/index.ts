@@ -69,6 +69,14 @@ export interface PlannedOutfit {
   outfit: Outfit
 }
 
+/** One day an outfit is on (for the outfit's own page). */
+export interface OutfitDay {
+  /** The calendar entry's id. */
+  id: string
+  /** The day, "YYYY-MM-DD". */
+  date: string
+}
+
 // ---- AI stylist (/api/ai) ----
 
 export interface OutfitSuggestionRequest {

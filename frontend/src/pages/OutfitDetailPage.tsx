@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { parseApiError } from '../api/errors'
 import { deleteOutfit } from '../api/outfits'
+import OutfitCalendarPanel from '../components/calendar/OutfitCalendarPanel'
 import Button from '../components/ui/Button'
 import ClothingGrid, { ClothingGridSkeleton } from '../components/wardrobe/ClothingGrid'
 import { useOutfit } from '../hooks/useOutfit'
 
 /**
- * /outfits/:id: one saved outfit with its items in order, plus Edit and Delete.
+ * /outfits/:id: one saved outfit with its items in order, when it's on the calendar
+ * ("Plan this outfit"), plus Edit and Delete.
  * Delete asks for confirmation inside the page (same pattern as the clothing detail page).
  */
 export default function OutfitDetailPage() {
@@ -124,6 +126,8 @@ export default function OutfitDetailPage() {
           </div>
         </div>
       )}
+
+      <OutfitCalendarPanel outfitId={outfit.id} />
 
       {/* The items in the outfit's order. Each card opens that piece of clothing. */}
       <ClothingGrid items={outfit.items} />

@@ -1,5 +1,6 @@
 package com.fitcheck.calendar;
 
+import com.fitcheck.calendar.dto.OutfitDayResponse;
 import com.fitcheck.calendar.dto.PlanOutfitRequest;
 import com.fitcheck.calendar.dto.PlannedOutfitResponse;
 import com.fitcheck.common.exception.BadRequestException;
@@ -59,6 +60,19 @@ public class CalendarService {
         }
         return plans.findAllByOwner_IdAndDayBetweenOrderByDayAscCreatedAtAscIdAsc(ownerId, from, to).stream()
                 .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Every day one of the owner's outfits is on, earliest first (past and future).
+     *
+     * @throws NotFoundException if the outfit isn't one of the owner's
+     */
+    @Transactional(readOnly = true)
+    public List<OutfitDayResponse> daysFor(UUID ownerId, UUID outfitId) {
+        Outfit outfit = outfits.findOwned(ownerId, outfitId);
+        return plans.findAllByOutfit_IdOrderByDayAsc(outfit.getId()).stream()
+                .map(p -> new OutfitDayResponse(p.getId(), p.getDay()))
                 .toList();
     }
 

@@ -181,6 +181,25 @@ class CalendarApiTest {
     }
 
     @Test
+    void listsEveryDayOfOneOutfitEarliestFirst() throws Exception {
+        String work = outfit(alice, "Work");
+        String gym = outfit(alice, "Gym");
+        plan(alice, "2026-12-11", work);
+        plan(alice, "2026-11-20", work); // a past day: "last worn"
+        plan(alice, "2026-12-04", work);
+        plan(alice, "2026-12-04", gym);  // another outfit: not listed
+
+        mvc.perform(get("/api/calendar/outfits/" + work).header("Authorization", bearer(alice)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].date", contains("2026-11-20", "2026-12-04", "2026-12-11")))
+                .andExpect(jsonPath("$[0].id").isNotEmpty());
+
+        // Someone else's outfit: same 404 as one that doesn't exist.
+        mvc.perform(get("/api/calendar/outfits/" + work).header("Authorization", bearer(bob)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void needsLogin() throws Exception {
         mvc.perform(get("/api/calendar").param("from", "2026-12-01").param("to", "2026-12-07"))
                 .andExpect(status().isUnauthorized());

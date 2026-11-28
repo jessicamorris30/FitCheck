@@ -1,6 +1,7 @@
 package com.fitcheck.calendar;
 
 import com.fitcheck.auth.AuthenticatedUser;
+import com.fitcheck.calendar.dto.OutfitDayResponse;
 import com.fitcheck.calendar.dto.PlanOutfitRequest;
 import com.fitcheck.calendar.dto.PlannedOutfitResponse;
 import jakarta.validation.Valid;
@@ -43,6 +44,15 @@ public class CalendarController {
             @RequestParam LocalDate from,
             @RequestParam LocalDate to) {
         return calendar.list(me.id(), from, to);
+    }
+
+    /**
+     * GET /api/calendar/outfits/{outfitId} → every day that outfit is on, earliest first, as
+     * [{"id","date"}]. For the outfit's own page. 404 if the outfit isn't yours.
+     */
+    @GetMapping("/outfits/{outfitId}")
+    public List<OutfitDayResponse> daysFor(@AuthenticationPrincipal AuthenticatedUser me, @PathVariable UUID outfitId) {
+        return calendar.daysFor(me.id(), outfitId);
     }
 
     /**

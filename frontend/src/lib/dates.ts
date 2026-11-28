@@ -38,6 +38,45 @@ export function weekDays(monday: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
 }
 
+/** A month as "YYYY-MM" (local). */
+export function toIsoMonth(date: Date): string {
+  return toIsoDay(date).slice(0, 7)
+}
+
+/** "YYYY-MM" → the 1st of that month (local midnight), or null if it isn't a real month. */
+export function parseIsoMonth(month: string | null | undefined): Date | null {
+  return parseIsoDay(`${month ?? ''}-01`)
+}
+
+/** The 1st of the month `months` months after `firstOfMonth` (negative = earlier). */
+export function addMonths(firstOfMonth: Date, months: number): Date {
+  return new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() + months, 1)
+}
+
+/**
+ * The days a month view shows: whole weeks (Monday to Sunday) from the week of the 1st to the
+ * week of the last day. 4 to 6 weeks, so 28 to 42 days.
+ */
+export function monthGridDays(firstOfMonth: Date): Date[] {
+  const lastOfMonth = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() + 1, 0)
+  const start = startOfWeek(firstOfMonth)
+  const end = addDays(startOfWeek(lastOfMonth), 6)
+  const days: Date[] = []
+  for (let d = start; d <= end; d = addDays(d, 1)) days.push(d)
+  return days
+}
+
+/** "December 2026", in the reader's language. */
+export function formatMonth(firstOfMonth: Date): string {
+  return firstOfMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+}
+
+/** "Fri, Dec 4" (or "Fri 4 Dec", depending on the reader's settings) from "YYYY-MM-DD". */
+export function formatDayShort(isoDay: string): string {
+  const date = parseIsoDay(isoDay)
+  return date ? date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : isoDay
+}
+
 /**
  * The week as a date range in the reader's own style, e.g. "Nov 23 – 29, 2026" (US) or
  * "23–29 Nov 2026" (UK). formatRange leaves out repeated parts (same month, same year) itself.
