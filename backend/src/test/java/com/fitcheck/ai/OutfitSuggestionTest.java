@@ -14,6 +14,8 @@ import com.fitcheck.clothing.ClothingItem;
 import com.fitcheck.clothing.ClothingItemRepository;
 import com.fitcheck.storage.BlobStorageService;
 import com.fitcheck.storage.TestImages;
+import com.fitcheck.style.UserStyle;
+import com.fitcheck.style.UserStyleRepository;
 import com.fitcheck.stylist.AiRefusedException;
 import com.fitcheck.stylist.FakeStylistClient;
 import com.fitcheck.stylist.StylistClient;
@@ -226,6 +228,94 @@ class OutfitSuggestionTest {
     @Test
     void rejectsATooLongPromptWithAPhoto() throws Exception {
         askWithPhoto(alice, "x".repeat(501), TestImages.png(10, 10)).andExpect(status().isBadRequest());
+    }
+
+    // ---- the user's personal style (step 7.5) ----
+
+    @Autowired
+    private UserStyleRepository styles;
+
+    /** Saves a style for alice: a note, and optionally notes already written for it. */
+    private void aliceStyle(boolean useWithAi, String writtenNotes, boolean notesUpToDate) {
+        UserStyle style = new UserStyle(alice.getId());
+        style.setUseWithAi(useWithAi);
+        style.changeNote("Black and white, no heels");
+        style.markChanged(); // version 1
+        if (writtenNotes != null) {
+            style.setDescription(writtenNotes, notesUpToDate ? 1 : 0);
+        }
+        styles.saveAndFlush(style);
+    }
+
+    private void answerWithOneOutfit() {
+        fake.styleAnswer = sample -> "Freshly written notes";
+        fake.describeCalls = 0;
+        fake.answer = req -> new SuggestionResult(List.of(
+                new Suggestion("Easy", List.of(tee.getId(), jeans.getId()), "Simple.")));
+    }
+
+    @Test
+    void theStylistGetsTheStyleNotesAsTextNotThePhotos() throws Exception {
+        answerWithOneOutfit();
+        aliceStyle(true, "Monochrome minimalist; flats only.", true);
+
+        String body = ask(alice, "dinner with friends").andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(fake.lastRequest.styleNotes()).isEqualTo("Monochrome minimalist; flats only.");
+        assertThat(fake.describeCalls).isZero(); // already up to date: no extra Claude call
+        // The notes stay private: the stylist's answer to the browser doesn't contain them.
+        assertThat(body).doesNotContain("Monochrome minimalist");
+    }
+
+    @Test
+    void switchedOffOrNoStyleMeansNoNotes() throws Exception {
+        answerWithOneOutfit();
+        ask(alice, "dinner").andExpect(status().isOk());
+        assertThat(fake.lastRequest.styleNotes()).isNull();
+
+        aliceStyle(false, "Monochrome minimalist; flats only.", true);
+        ask(alice, "dinner").andExpect(status().isOk());
+        assertThat(fake.lastRequest.styleNotes()).isNull();
+    }
+
+    @Test
+    void notesNotWrittenYetAreWrittenFirst() throws Exception {
+        answerWithOneOutfit();
+        aliceStyle(true, null, false);
+
+        ask(alice, "dinner").andExpect(status().isOk());
+
+        assertThat(fake.describeCalls).isEqualTo(1);
+        assertThat(fake.lastStyleSample.note()).isEqualTo("Black and white, no heels");
+        assertThat(fake.lastRequest.styleNotes()).isEqualTo("Freshly written notes");
+    }
+
+    @Test
+    void outOfDateNotesAreStillUsedWhileNewOnesAreWritten() throws Exception {
+        answerWithOneOutfit();
+        aliceStyle(true, "Older notes", false);
+
+        ask(alice, "dinner").andExpect(status().isOk());
+
+        // The request doesn't wait: it uses the older notes (new ones are written in the background).
+        assertThat(fake.lastRequest.styleNotes()).isEqualTo("Older notes");
+    }
+
+    @Test
+    void aRefusedRequestNeverCostsAStyleDescription() throws Exception {
+        answerWithOneOutfit();
+        aliceStyle(true, null, false);
+        User unconfirmed = users.saveAndFlush(new User("unconfirmed-" + UUID.randomUUID() + "@example.com", "hash"));
+        UserStyle style = new UserStyle(unconfirmed.getId());
+        style.changeNote("Boho");
+        style.markChanged();
+        styles.saveAndFlush(style);
+        item(unconfirmed, "Skirt", ClothingCategory.BOTTOM, false);
+
+        ask(unconfirmed, "dinner").andExpect(status().isForbidden());
+
+        assertThat(fake.describeCalls).isZero();
     }
 
     private ResultActions askWithPhoto(User user, String prompt, byte[] photo) throws Exception {

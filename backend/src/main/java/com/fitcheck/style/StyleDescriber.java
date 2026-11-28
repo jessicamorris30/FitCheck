@@ -100,6 +100,13 @@ public class StyleDescriber {
         return describe(userId, null);
     }
 
+    /** Same, on a background thread: the stylist uses the older notes meanwhile. */
+    @Async
+    public void describeIfStaleInBackground(UUID userId) {
+        Outcome outcome = describe(userId, null);
+        log.info("Style notes catch-up for user {}: {}", userId, outcome);
+    }
+
     /** A snapshot of what to describe, taken in a short read-only transaction. */
     private record Plan(int version, List<String> photoBlobs, String note) {
     }

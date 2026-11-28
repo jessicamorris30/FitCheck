@@ -27,11 +27,18 @@ public final class StylistModels {
      * @param wardrobe        the user's clothes, in a stable order (oldest first; see OutfitSuggestionService)
      * @param prompt          what the user is going for, e.g. "rainy-day office look"; may be null
      * @param inspirationJpeg a photo of a look the user likes (already downscaled to JPEG); may be null
+     * @param styleNotes      the private notes on the user's personal style (Phase 7); null if they
+     *                        have none or switched the feature off
      */
-    public record SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt, byte[] inspirationJpeg) {
+    public record SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt, byte[] inspirationJpeg,
+            String styleNotes) {
 
         public SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt) {
-            this(wardrobe, prompt, null);
+            this(wardrobe, prompt, null, null);
+        }
+
+        public SuggestionRequest(List<WardrobeEntry> wardrobe, String prompt, byte[] inspirationJpeg) {
+            this(wardrobe, prompt, inspirationJpeg, null);
         }
     }
 

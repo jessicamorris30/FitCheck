@@ -11,6 +11,7 @@ import com.fitcheck.storage.ImageTooLargeException;
 import com.fitcheck.storage.ImageType;
 import com.fitcheck.storage.ThumbnailCache;
 import com.fitcheck.storage.ThumbnailService;
+import com.fitcheck.style.StyleNotesLookup;
 import com.fitcheck.stylist.AiUnavailableException;
 import com.fitcheck.stylist.StylistClient;
 import com.fitcheck.stylist.StylistModels.Suggestion;
@@ -49,16 +50,18 @@ public class OutfitSuggestionService {
     private final ThumbnailService imageResizer;
     private final StylistClient stylist;
     private final AiUsageService usageService;
+    private final StyleNotesLookup styleNotes;
 
     public OutfitSuggestionService(ClothingItemRepository clothing, BlobStorageService storage,
             ThumbnailCache thumbnails, ThumbnailService imageResizer, StylistClient stylist,
-            AiUsageService usageService) {
+            AiUsageService usageService, StyleNotesLookup styleNotes) {
         this.clothing = clothing;
         this.storage = storage;
         this.thumbnails = thumbnails;
         this.imageResizer = imageResizer;
         this.stylist = stylist;
         this.usageService = usageService;
+        this.styleNotes = styleNotes;
     }
 
     /** Largest side of an inspiration photo sent to Claude. Bigger costs more and adds nothing. */
@@ -100,12 +103,17 @@ public class OutfitSuggestionService {
         UUID usageId = usageService.checkAndRecord(ownerId);
 
         try {
-            // 3. Ask Claude (the slow part).
+            // 3. The user's personal style (Phase 7), as Claude's private notes: text only, never the
+            //    style photos themselves. Null if they have none or switched it off. Looked up only
+            //    now, after the guard rails, so a refused request never costs a style description.
+            String notes = styleNotes.notesFor(ownerId);
+
+            // 4. Ask Claude (the slow part).
             List<WardrobeEntry> wardrobe = items.stream().map(this::toEntry).toList();
             SuggestionResult result = stylist.suggest(
-                    new SuggestionRequest(wardrobe, hasPrompt ? prompt.trim() : null, inspirationJpeg));
+                    new SuggestionRequest(wardrobe, hasPrompt ? prompt.trim() : null, inspirationJpeg, notes));
 
-            // 4. Never trust the answer blindly: keep only ids that really are this user's items.
+            // 5. Never trust the answer blindly: keep only ids that really are this user's items.
             //    (Claude only sees this user's items, but checking costs nothing and protects against
             //    any mistake, now or after future changes.)
             Map<UUID, ClothingItem> owned = items.stream()
