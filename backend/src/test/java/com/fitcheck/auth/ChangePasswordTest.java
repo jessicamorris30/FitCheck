@@ -1,5 +1,6 @@
 package com.fitcheck.auth;
 
+import com.fitcheck.TestAccounts;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,7 +30,7 @@ class ChangePasswordTest {
 
     /** Registers and logs in on two "devices": returns {accessToken, laptopCookie, phoneCookie}. */
     private String[] userWithTwoDevices(String email) throws Exception {
-        String body = "{\"email\":\"" + email + "\",\"password\":\"old-password-1\"}";
+        String body = TestAccounts.registerJson(email, "old-password-1");
         MockHttpServletResponse laptop = mvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andReturn().getResponse();
         MockHttpServletResponse phone = mvc.perform(post("/api/auth/login")

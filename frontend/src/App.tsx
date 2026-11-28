@@ -3,6 +3,7 @@ import AccountPage from './pages/AccountPage.tsx'
 import CalendarPage from './pages/CalendarPage.tsx'
 import Layout from './components/layout/Layout.tsx'
 import ClothingDetailPage from './pages/ClothingDetailPage.tsx'
+import FinishProfilePage from './pages/FinishProfilePage.tsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.tsx'
@@ -37,6 +38,8 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route element={<ProtectedRoute />}>
+        {/* Logged in, but without the navigation bar: nothing else is usable until it's done. */}
+        <Route path="/finish-profile" element={<FinishProfilePage />} />
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/wardrobe" replace />} />
           <Route path="/wardrobe" element={<WardrobePage />} />

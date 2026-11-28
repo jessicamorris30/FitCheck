@@ -7,8 +7,10 @@ import com.fitcheck.common.exception.ConflictException;
 import com.fitcheck.common.exception.FieldErrorException;
 import com.fitcheck.security.LoginAttemptService;
 import com.fitcheck.common.exception.UnauthorizedException;
+import com.fitcheck.user.ProfileRules;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserRepository;
+import com.fitcheck.user.UserService;
 import com.fitcheck.user.dto.UserResponse;
 import java.util.Locale;
 import java.util.UUID;
@@ -26,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    private static final String INVALID_CREDENTIALS = "Invalid email or password";
+    private static final String INVALID_CREDENTIALS = "Invalid email, username or password";
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
@@ -34,6 +36,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokens;
     private final EmailVerificationService emailVerification;
     private final LoginAttemptService loginAttempts;
+    private final UserService userService;
 
     /** A real BCrypt hash of a random string; only used to equalize login timing (see login). */
     private final String dummyHash;
@@ -41,13 +44,14 @@ public class AuthService {
     // Spring sees this constructor and passes in the matching beans ("dependency injection").
     public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
             RefreshTokenService refreshTokens, EmailVerificationService emailVerification,
-            LoginAttemptService loginAttempts) {
+            LoginAttemptService loginAttempts, UserService userService) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokens = refreshTokens;
         this.emailVerification = emailVerification;
         this.loginAttempts = loginAttempts;
+        this.userService = userService;
         this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -70,14 +74,22 @@ public class AuthService {
         if (users.existsByEmailIgnoreCase(email)) {
             throw new ConflictException("An account with this email already exists");
         }
+        String usernameProblem = userService.usernameProblem(request.username(), null);
+        if (usernameProblem != null) {
+            throw new FieldErrorException("username", usernameProblem);
+        }
 
         // Never store the password itself: BCrypt turns it into a salted, one-way hash.
-        User user;
+        User user = new User(email, passwordEncoder.encode(request.password()));
+        user.setProfile(request.username(), request.firstName(), request.lastName());
         try {
-            user = users.saveAndFlush(new User(email, passwordEncoder.encode(request.password())));
+            user = users.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
-            // Two sign-ups with the same email at the same moment can both pass the check above;
-            // the unique index in the database stops the second one and we land here.
+            // Two sign-ups with the same email or username at the same moment can both pass the
+            // checks above; the unique indexes in the database stop the second one and we land here.
+            if (users.existsByUsernameIgnoreCase(request.username())) {
+                throw new FieldErrorException("username", "That username is already taken");
+            }
             throw new ConflictException("An account with this email already exists");
         }
         // Queues the "Confirm your email" message; it is sent after this transaction commits.
@@ -93,23 +105,29 @@ public class AuthService {
      */
     @Transactional
     public AuthSession login(LoginRequest request) {
-        String email = normalizeEmail(request.email());
-        loginAttempts.checkNotLocked(email); // too many wrong passwords for this email lately → 429
+        // Anything with '@' is an email; usernames can't contain one (ProfileRules).
+        String typed = request.login();
+        User user = typed.contains("@")
+                ? users.findByEmailIgnoreCase(normalizeEmail(typed)).orElse(null)
+                : users.findByUsernameIgnoreCase(ProfileRules.normalizeUsername(typed)).orElse(null);
 
-        User user = users.findByEmailIgnoreCase(email).orElse(null);
+        // The "too many wrong passwords" lock belongs to the ACCOUNT, so typing the email and then
+        // the username can't buy extra guesses. Unknown logins get their own counter.
+        String lockKey = user != null ? "user:" + user.getId() : "unknown:" + typed.toLowerCase(Locale.ROOT);
+        loginAttempts.checkNotLocked(lockKey); // too many wrong passwords lately → 429
 
         if (user == null) {
-            // Still run one BCrypt check so "unknown email" takes as long as "wrong password".
+            // Still run one BCrypt check so "unknown account" takes as long as "wrong password".
             // Otherwise the response time alone would reveal whether an account exists.
             passwordEncoder.matches(request.password(), dummyHash);
-            loginAttempts.recordFailure(email);
+            loginAttempts.recordFailure(lockKey);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            loginAttempts.recordFailure(email);
+            loginAttempts.recordFailure(lockKey);
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
-        loginAttempts.recordSuccess(email);
+        loginAttempts.recordSuccess(lockKey);
         return startSession(user);
     }
 

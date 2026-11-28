@@ -51,6 +51,17 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
 - [x] Go-live check, including AI prompt-injection tests and a rate-limit spoofing fix
 - [x] Monitoring: alerts, budget, saved log searches; [DEPLOYMENT.md](DEPLOYMENT.md)
 
+## Phase 7: Profiles, your style, light/dark mode (in progress)
+- [x] 7.1 Accounts (backend): username + first/last name (V7), sign-up requires them, log in with email
+      or username (one wrong-password lock per account), `PUT /users/me/profile`, `check-username`
+- [x] 7.2 Accounts (screens): sign-up fields with live username check, "Email or username" login,
+      "Finish your profile" for older accounts, edit on Account page, @username in the top bar
+- [ ] 7.3 Your style (backend): up to 5 style photos + text; Claude writes a private style description
+- [ ] 7.4 Your style (screen): "My style" on the Account page, on/off switch for the AI stylist
+- [ ] 7.5 The AI stylist uses your style in every request (Plan-mode input still wins for that request)
+- [ ] 7.6 Light / Dark / System theme, saved to the account and remembered per device
+- [ ] 7.7 Polish and release v1.3
+
 ## Later
 - [x] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) no longer trip
       refresh-token reuse detection: a just-replaced token works for 10 more seconds

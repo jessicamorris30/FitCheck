@@ -1,13 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { parseApiError } from '../api/errors'
 import DeleteAccountSection from '../components/account/DeleteAccountSection'
+import ProfileSection from '../components/account/ProfileSection'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
- * /account: your account details and settings: change password, delete account.
+ * /account: your account details and settings: profile (name, username), change password,
+ * delete account.
  */
 export default function AccountPage() {
   useDocumentTitle('Account')
@@ -52,7 +54,10 @@ export default function AccountPage() {
   return (
     <section className="mx-auto flex max-w-xl flex-col gap-8">
       <header>
-        <h1 className="text-2xl font-semibold">Your account</h1>
+        <h1 className="text-2xl font-semibold">
+          {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : 'Your account'}
+        </h1>
+        {user.username && <p className="text-gray-500">@{user.username}</p>}
         <p className="mt-1 text-gray-600">
           {user.email}{' '}
           {user.emailVerified ? (
@@ -65,6 +70,8 @@ export default function AccountPage() {
           Member since {new Date(user.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
         </p>
       </header>
+
+      <ProfileSection user={user} />
 
       <form
         onSubmit={handleSubmit}

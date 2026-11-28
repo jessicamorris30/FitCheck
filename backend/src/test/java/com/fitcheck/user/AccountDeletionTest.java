@@ -1,5 +1,6 @@
 package com.fitcheck.user;
 
+import com.fitcheck.TestAccounts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -63,7 +64,7 @@ class AccountDeletionTest {
     void createAFullAccount() throws Exception {
         email = "goodbye-" + UUID.randomUUID() + "@example.com";
         MockHttpServletResponse reg = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"my-password-1\"}"))
+                        .content(TestAccounts.registerJson(email, "my-password-1")))
                 .andReturn().getResponse();
         token = JsonPath.read(reg.getContentAsString(), "$.accessToken");
         userId = UUID.fromString(JsonPath.read(reg.getContentAsString(), "$.user.id"));
@@ -110,7 +111,7 @@ class AccountDeletionTest {
         mvc.perform(post("/api/auth/refresh").cookie(new Cookie("fitcheck_refresh", refreshCookie)))
                 .andExpect(status().isUnauthorized());
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"my-password-1\"}"))
+                        .content(TestAccounts.registerJson(email, "my-password-1")))
                 .andExpect(status().isUnauthorized());
     }
 

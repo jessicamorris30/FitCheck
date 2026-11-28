@@ -1,5 +1,6 @@
 package com.fitcheck.auth;
 
+import com.fitcheck.TestAccounts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,7 +59,7 @@ class PasswordResetTest {
 
     private String register(String email) throws Exception {
         return mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"old-password-1\"}"))
+                        .content(TestAccounts.registerJson(email, "old-password-1")))
                 .andReturn().getResponse().getCookie("fitcheck_refresh").getValue();
     }
 

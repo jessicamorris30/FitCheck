@@ -1,5 +1,6 @@
 package com.fitcheck.auth;
 
+import com.fitcheck.TestAccounts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -115,7 +116,7 @@ class RefreshFlowTest {
     // ---- helpers ----
 
     private MockHttpServletResponse registerAndLogin(String email) throws Exception {
-        String body = "{\"email\":\"" + email + "\",\"password\":\"correct-horse\"}";
+        String body = TestAccounts.registerJson(email, "correct-horse");
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated());
         return mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))

@@ -30,6 +30,16 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    /** Lower case, unique; can be used to log in. Null for accounts made before Phase 7 until set. */
+    @Column(length = 30)
+    private String username;
+
+    @Column(name = "first_name", length = 50)
+    private String firstName;
+
+    @Column(name = "last_name", length = 50)
+    private String lastName;
+
     /** When the user clicked the link in their confirmation email; null until then. */
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -65,6 +75,30 @@ public class User {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    /** Sets username and name together (sign-up, "finish your profile", profile editing). */
+    public void setProfile(String username, String firstName, String lastName) {
+        this.username = username;
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    /** False for accounts made before usernames existed, until they fill them in. */
+    public boolean isProfileComplete() {
+        return username != null && firstName != null && lastName != null;
     }
 
     public boolean isEmailVerified() {

@@ -40,12 +40,16 @@ class AuthControllerTest {
     @Test
     void registersUserAndStoresHashedPassword() throws Exception {
         register("""
-                { "email": "  New.User@Example.com ", "password": "correct-horse" }
+                { "email": "  New.User@Example.com ", "password": "correct-horse", "username": " New.User ", "firstName": " Ada ", "lastName": "Lovelace" }
                 """)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
                 .andExpect(jsonPath("$.user.id").isNotEmpty())
                 .andExpect(jsonPath("$.user.email").value("new.user@example.com"))
+                .andExpect(jsonPath("$.user.username").value("new.user"))
+                .andExpect(jsonPath("$.user.firstName").value("Ada"))
+                .andExpect(jsonPath("$.user.lastName").value("Lovelace"))
+                .andExpect(jsonPath("$.user.profileComplete").value(true))
                 .andExpect(jsonPath("$.user.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.user.passwordHash").doesNotExist());
 
@@ -57,11 +61,11 @@ class AuthControllerTest {
     @Test
     void rejectsDuplicateEmailInAnyCase() throws Exception {
         register("""
-                { "email": "taken@example.com", "password": "password-1" }
+                { "email": "taken@example.com", "password": "password-1", "username": "taken1", "firstName": "A", "lastName": "B" }
                 """).andExpect(status().isCreated());
 
         register("""
-                { "email": "TAKEN@example.com", "password": "password-2" }
+                { "email": "TAKEN@example.com", "password": "password-2", "username": "taken2", "firstName": "A", "lastName": "B" }
                 """)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("An account with this email already exists"));
@@ -89,7 +93,7 @@ class AuthControllerTest {
     @Test
     void loginReturnsAccessTokenThatUnlocksMe() throws Exception {
         register("""
-                { "email": "login@example.com", "password": "correct-horse" }
+                { "email": "login@example.com", "password": "correct-horse", "username": "loginuser", "firstName": "A", "lastName": "B" }
                 """).andExpect(status().isCreated());
 
         String body = login("""
@@ -110,20 +114,20 @@ class AuthControllerTest {
     @Test
     void wrongPasswordAndUnknownEmailGetTheSame401() throws Exception {
         register("""
-                { "email": "real@example.com", "password": "correct-horse" }
+                { "email": "real@example.com", "password": "correct-horse", "username": "realuser", "firstName": "A", "lastName": "B" }
                 """).andExpect(status().isCreated());
 
         login("""
                 { "email": "real@example.com", "password": "wrong-password" }
                 """)
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+                .andExpect(jsonPath("$.message").value("Invalid email, username or password"));
 
         login("""
                 { "email": "ghost@example.com", "password": "whatever-123" }
                 """)
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+                .andExpect(jsonPath("$.message").value("Invalid email, username or password"));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.fitcheck.auth.AuthenticatedUser;
 import com.fitcheck.auth.EmailVerificationService;
 import com.fitcheck.config.JwtProperties;
 import com.fitcheck.user.dto.DeleteAccountRequest;
+import com.fitcheck.user.dto.ProfileRequest;
 import com.fitcheck.user.dto.UserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -14,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -49,6 +51,17 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse me(@AuthenticationPrincipal AuthenticatedUser me) {
         return UserResponse.from(userService.getById(me.id()));
+    }
+
+    /**
+     * PUT /api/users/me/profile {"username","firstName","lastName"} → the updated user.
+     * Sets them for accounts from before Phase 7 ("finish your profile") or changes them later.
+     * 400 with fieldErrors (fieldErrors.username if it's taken or reserved).
+     */
+    @PutMapping("/me/profile")
+    public UserResponse updateProfile(@AuthenticationPrincipal AuthenticatedUser me,
+            @Valid @RequestBody ProfileRequest request) {
+        return UserResponse.from(userService.updateProfile(me.id(), request));
     }
 
     /**

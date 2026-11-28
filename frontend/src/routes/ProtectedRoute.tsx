@@ -9,6 +9,8 @@ import { useAuth } from '../hooks/useAuth'
  *    logged-in user would see the login form flash on every reload.
  *  - Not logged in? Go to /login, remembering where they were headed (`state.from`) so the
  *    login page can send them back there afterwards.
+ *  - Logged in, but the account is from before usernames existed? Send them to
+ *    /finish-profile first (again remembering where they were headed).
  *  - Logged in? Render the requested page (<Outlet />).
  */
 export default function ProtectedRoute() {
@@ -17,5 +19,8 @@ export default function ProtectedRoute() {
 
   if (loading) return <FullPageSpinner />
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />
+  if (!user.profileComplete && location.pathname !== '/finish-profile') {
+    return <Navigate to="/finish-profile" replace state={{ from: location }} />
+  }
   return <Outlet />
 }

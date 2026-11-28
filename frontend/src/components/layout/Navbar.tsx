@@ -32,8 +32,8 @@ export default function Navbar() {
 
       <div className="ml-auto flex items-center gap-4 text-sm">
         {user && (
-          <NavLink to="/account" title="Your account" className={link}>
-            {user.email}
+          <NavLink to="/account" title={`Your account (${user.email})`} className={link}>
+            {user.username ? `@${user.username}` : user.email}
           </NavLink>
         )}
         {user && (

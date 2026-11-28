@@ -15,8 +15,9 @@ Errors use one shape (`ApiError`):
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/auth/register` | `{ email, password }` | `201 AuthResponse` + sets refresh cookie |
-| POST | `/auth/login` | `{ email, password }` | `200 AuthResponse` + sets refresh cookie |
+| POST | `/auth/register` | `{ email, password, username, firstName, lastName }` | `201 AuthResponse` + sets refresh cookie. `400` with `fieldErrors` (`username` if taken or reserved), `409` email taken |
+| POST | `/auth/check-username` | `{ username }` | `200 { username, available, message }` (the live check at sign-up; 60/min per IP) |
+| POST | `/auth/login` | `{ login, password }`: `login` is an email (contains `@`) or a username, any letter case (`email` is accepted as the field name too) | `200 AuthResponse` + sets refresh cookie. `401` wrong login/password, `429` after 5 wrong passwords for one account in 15 min (counted per account, whether email or username was typed) |
 | POST | `/auth/refresh` | none (uses the refresh cookie) | `200 AuthResponse` + rotates the refresh cookie |
 | POST | `/auth/logout` | none | `204`, revokes the token family and clears the cookie |
 | POST | `/auth/verify-email` | `{ token }` | `200 UserResponse`, or `400` if the link is invalid or expired |
@@ -27,17 +28,17 @@ Errors use one shape (`ApiError`):
 `AuthResponse`:
 
 ```json
-{ "accessToken": "eyJ...", "expiresIn": 900, "user": { "id": "uuid", "email": "a@b.com", "createdAt": "..." } }
+{ "accessToken": "eyJ...", "expiresIn": 900, "user": UserResponse }
 ```
 
 ## Users
 
 | Method | Path | Response |
 |---|---|---|
-| GET | `/users/me` | `UserResponse` `{ id, email, emailVerified, createdAt }` |
+| GET | `/users/me` | `UserResponse` `{ id, email, username, firstName, lastName, profileComplete, emailVerified, createdAt }`. `profileComplete` is false for accounts from before usernames existed until they set one |
+| PUT | `/users/me/profile` | Body `{ username, firstName, lastName }` → `UserResponse`. `400` with `fieldErrors` (`username` if taken or reserved) |
 | DELETE | `/users/me` | Body `{ password }`. `204`: the account and everything in it are deleted (database rows by cascade; files under `users/<id>/` after commit) and the refresh cookie is cleared. `400` with `fieldErrors.password` if the password is wrong |
 | POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
-| DELETE | `/users/me` | `204` (deletes the account, all items, outfits, calendar and blobs) |
 
 ## Clothing
 

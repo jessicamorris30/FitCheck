@@ -7,10 +7,13 @@ import com.fitcheck.auth.dto.ForgotPasswordRequest;
 import com.fitcheck.auth.dto.ResetPasswordRequest;
 import com.fitcheck.auth.dto.LoginRequest;
 import com.fitcheck.auth.dto.RegisterRequest;
+import com.fitcheck.auth.dto.UsernameCheckRequest;
+import com.fitcheck.auth.dto.UsernameCheckResponse;
 import com.fitcheck.auth.dto.VerifyEmailRequest;
 import com.fitcheck.common.exception.ApiError;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
+import com.fitcheck.user.UserService;
 import com.fitcheck.user.dto.UserResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,22 +44,40 @@ public class AuthController {
     private final EmailVerificationService emailVerification;
     private final PasswordResetService passwordReset;
     private final JwtProperties jwt;
+    private final UserService userService;
 
     public AuthController(AuthService authService, EmailVerificationService emailVerification,
-            PasswordResetService passwordReset, JwtProperties jwt) {
+            PasswordResetService passwordReset, JwtProperties jwt, UserService userService) {
         this.authService = authService;
         this.emailVerification = emailVerification;
         this.passwordReset = passwordReset;
         this.jwt = jwt;
+        this.userService = userService;
     }
 
-    /** POST /api/auth/register → 201 + AuthResponse + refresh cookie. 400 invalid input, 409 email taken. */
+    /**
+     * POST /api/auth/register → 201 + AuthResponse + refresh cookie.
+     * 400 invalid input (fieldErrors.username if the username is taken), 409 email taken.
+     */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return withRefreshCookie(HttpStatus.CREATED, authService.register(request));
     }
 
-    /** POST /api/auth/login → 200 + AuthResponse + refresh cookie. 401 wrong email/password. */
+    /**
+     * POST /api/auth/check-username {"username"} → {username, available, message}: the live check
+     * while typing a username at sign-up. Always 200; rate-limited per IP.
+     */
+    @PostMapping("/check-username")
+    public UsernameCheckResponse checkUsername(@RequestBody UsernameCheckRequest request) {
+        String problem = userService.usernameProblem(request.username(), null);
+        return new UsernameCheckResponse(request.username(), problem == null, problem);
+    }
+
+    /**
+     * POST /api/auth/login {"login": email or username, "password"} → 200 + AuthResponse + refresh
+     * cookie. 401 wrong login/password, 429 too many wrong passwords for that account.
+     */
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return withRefreshCookie(HttpStatus.OK, authService.login(request));

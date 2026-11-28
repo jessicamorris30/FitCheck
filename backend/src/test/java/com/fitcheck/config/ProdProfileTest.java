@@ -1,5 +1,6 @@
 package com.fitcheck.config;
 
+import com.fitcheck.TestAccounts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,7 +66,7 @@ class ProdProfileTest {
     void refreshCookieRequiresHttpsInProduction() throws Exception {
         MockHttpServletResponse response = mvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"prod-" + System.nanoTime() + "@example.com\",\"password\":\"long-enough-1\"}"))
+                        .content(TestAccounts.registerJson("prod-" + System.nanoTime() + "@example.com", "long-enough-1")))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse();
         assertThat(response.getHeader("Set-Cookie")).contains("Secure").contains("HttpOnly").contains("SameSite=Strict");

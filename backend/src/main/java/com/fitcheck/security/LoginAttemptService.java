@@ -10,11 +10,13 @@ import org.springframework.stereotype.Service;
  * Protects each ACCOUNT against password guessing, on top of the per-IP limit in RateLimitFilter
  * (an attacker with many IP addresses gets past per-IP limits, but not this).
  *
- * <p>After 5 wrong passwords for one email within 15 minutes, further logins for that email are
- * refused until the window ends, even with the right password. A successful login clears the count.
+ * <p>After 5 wrong passwords for one account within 15 minutes, further logins for it are refused
+ * until the window ends, even with the right password. A successful login clears the count.
+ * The count is per account, whether the email or the username was typed (AuthService picks the
+ * key), so switching between them gives no extra guesses.
  *
- * <p>Counted for every email, whether or not it has an account, so the lock can't be used to find
- * out who is registered.
+ * <p>Logins that match no account are counted too (by what was typed), so the lock can't be used
+ * to find out who is registered.
  */
 @Service
 public class LoginAttemptService {
@@ -30,29 +32,32 @@ public class LoginAttemptService {
         this.enabled = enabled;
     }
 
-    /** @throws TooManyRequestsException if this email is temporarily locked */
-    public void checkNotLocked(String email) {
+    /**
+     * @param accountKey which account the attempt is for ("user:<id>", or "unknown:<what was typed>")
+     * @throws TooManyRequestsException if it is temporarily locked
+     */
+    public void checkNotLocked(String accountKey) {
         if (!enabled) {
             return;
         }
-        RateLimiter.Decision d = limiter.check(key(email), MAX_FAILURES);
+        RateLimiter.Decision d = limiter.check(key(accountKey), MAX_FAILURES);
         if (!d.allowed()) {
             throw new TooManyRequestsException("Too many failed login attempts for this account. Please wait "
                     + RateLimitFilter.humanize(d.retryAfterSeconds()) + " or reset your password.");
         }
     }
 
-    public void recordFailure(String email) {
+    public void recordFailure(String accountKey) {
         if (enabled) {
-            limiter.tryAcquire(key(email), MAX_FAILURES, LOCK_PERIOD);
+            limiter.tryAcquire(key(accountKey), MAX_FAILURES, LOCK_PERIOD);
         }
     }
 
-    public void recordSuccess(String email) {
-        limiter.reset(key(email));
+    public void recordSuccess(String accountKey) {
+        limiter.reset(key(accountKey));
     }
 
-    private static String key(String email) {
-        return "login-failures:" + email.trim().toLowerCase(Locale.ROOT);
+    private static String key(String accountKey) {
+        return "login-failures:" + accountKey.trim().toLowerCase(Locale.ROOT);
     }
 }

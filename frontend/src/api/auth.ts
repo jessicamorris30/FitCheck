@@ -4,13 +4,46 @@ import { api } from './client'
 // Endpoints under /api/auth (docs/API.md). Refreshing lives in client.ts (refreshSession),
 // because it must be shared with the 401 interceptor.
 
-export async function register(email: string, password: string): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/register', { email, password })
+/** Username and name: what sign-up, "finish your profile" and the Account page all send. */
+export interface ProfileInput {
+  username: string
+  firstName: string
+  lastName: string
+}
+
+export interface RegisterInput extends ProfileInput {
+  email: string
+  password: string
+}
+
+export async function register(input: RegisterInput): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>('/auth/register', input)
   return data
 }
 
-export async function login(email: string, password: string): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/login', { email, password })
+/** @param login an email or a username (the backend tells them apart by the '@') */
+export async function login(login: string, password: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>('/auth/login', { login, password })
+  return data
+}
+
+export interface UsernameCheck {
+  /** As it would be stored: trimmed, lower case. */
+  username: string
+  available: boolean
+  /** Why not, when it isn't available. */
+  message: string | null
+}
+
+/** The live "is this username free?" check while typing. */
+export async function checkUsername(username: string): Promise<UsernameCheck> {
+  const { data } = await api.post<UsernameCheck>('/auth/check-username', { username })
+  return data
+}
+
+/** Sets or changes the logged-in user's username and name. */
+export async function updateProfile(input: ProfileInput): Promise<User> {
+  const { data } = await api.put<User>('/users/me/profile', input)
   return data
 }
 

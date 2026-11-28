@@ -3,6 +3,12 @@
 export interface User {
   id: string
   email: string
+  /** Lower case; can be used to log in. Null for accounts from before usernames existed. */
+  username: string | null
+  firstName: string | null
+  lastName: string | null
+  /** False until username, first and last name are set; the app asks for them first. */
+  profileComplete: boolean
   /** True once the user clicked the link in their confirmation email. */
   emailVerified: boolean
   createdAt: string

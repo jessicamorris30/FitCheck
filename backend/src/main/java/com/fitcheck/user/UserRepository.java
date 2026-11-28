@@ -19,4 +19,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /** Used by registration: reject an email that is already taken. */
     boolean existsByEmailIgnoreCase(String email);
+
+    /** Used by login with a username instead of an email. */
+    Optional<User> findByUsernameIgnoreCase(String username);
+
+    boolean existsByUsernameIgnoreCase(String username);
 }

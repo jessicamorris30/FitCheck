@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import type { ProfileInput } from '../api/auth'
 import { parseApiError } from '../api/errors'
+import ProfileFields from '../components/account/ProfileFields'
 import AuthCard from '../components/auth/AuthCard'
 import Button from '../components/ui/Button'
 import FullPageSpinner from '../components/ui/FullPageSpinner'
@@ -8,12 +10,13 @@ import TextField from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
-/** Account creation. The backend logs the new user in straight away. */
+/** Account creation: name, username, email, password. The backend logs the new user in straight away. */
 export default function RegisterPage() {
   useDocumentTitle('Sign up')
   const { user, loading, register } = useAuth()
   const navigate = useNavigate()
 
+  const [profile, setProfile] = useState<ProfileInput>({ firstName: '', lastName: '', username: '' })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -38,7 +41,7 @@ export default function RegisterPage() {
     setFieldErrors({})
     setSubmitting(true)
     try {
-      await register(email, password)
+      await register({ ...profile, email, password })
       navigate('/wardrobe', { replace: true })
     } catch (err) {
       const parsed = parseApiError(err)
@@ -68,6 +71,17 @@ export default function RegisterPage() {
             {error}
           </p>
         )}
+        <ProfileFields
+          value={profile}
+          onChange={(next) => {
+            setProfile(next)
+            // An old "taken" error from the server would be wrong once the username changes.
+            if (fieldErrors.username && next.username !== profile.username) {
+              setFieldErrors(({ username: _old, ...rest }) => rest)
+            }
+          }}
+          fieldErrors={fieldErrors}
+        />
         <TextField
           label="Email"
           type="email"

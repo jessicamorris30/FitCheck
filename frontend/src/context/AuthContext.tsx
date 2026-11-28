@@ -8,8 +8,11 @@ export interface AuthContextValue {
   user: User | null
   /** True while the app checks for an existing session on first load. */
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
+  /** @param login email or username */
+  login: (login: string, password: string) => Promise<void>
+  register: (input: authApi.RegisterInput) => Promise<void>
+  /** Set or change username and name ("finish your profile", Account page). */
+  updateProfile: (input: authApi.ProfileInput) => Promise<void>
   logout: () => Promise<void>
   /** Replace the stored user, e.g. after the email is confirmed. Ignored if a different user. */
   updateUser: (user: User) => void
@@ -71,18 +74,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      startSession(await authApi.login(email, password))
+    async (login: string, password: string) => {
+      startSession(await authApi.login(login, password))
     },
     [startSession],
   )
 
   const register = useCallback(
-    async (email: string, password: string) => {
-      startSession(await authApi.register(email, password))
+    async (input: authApi.RegisterInput) => {
+      startSession(await authApi.register(input))
     },
     [startSession],
   )
+
+  const updateProfile = useCallback(async (input: authApi.ProfileInput) => {
+    setUser(await authApi.updateProfile(input)) // throws (with fieldErrors) if e.g. the username is taken
+  }, [])
 
   const logout = useCallback(async () => {
     try {
@@ -117,8 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // useMemo: only hand children a new object when something actually changed,
   // so components using useAuth() don't re-render for no reason.
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, updateUser, changePassword, deleteAccount }),
-    [user, loading, login, register, logout, updateUser, changePassword, deleteAccount],
+    () => ({ user, loading, login, register, updateProfile, logout, updateUser, changePassword, deleteAccount }),
+    [user, loading, login, register, updateProfile, logout, updateUser, changePassword, deleteAccount],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,5 +1,6 @@
 package com.fitcheck.security;
 
+import com.fitcheck.TestAccounts;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -67,6 +68,27 @@ class RateLimitTest {
     }
 
     @Test
+    void emailAndUsernameShareOneLockSoSwitchingGivesNoExtraGuesses() throws Exception {
+        String email = "both-" + UUID.randomUUID() + "@example.com";
+        String username = TestAccounts.uniqueUsername();
+        mvc.perform(post("/api/auth/register").with(r -> { r.setRemoteAddr("10.0.1.1"); return r; })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"right-password-1\",\"username\":\""
+                                + username + "\",\"firstName\":\"Both\",\"lastName\":\"Ways\"}"))
+                .andExpect(status().isCreated());
+
+        for (int i = 1; i <= 3; i++) {
+            login("192.0.2." + (10 + i), email, "wrong-" + i).andExpect(status().isUnauthorized());
+        }
+        for (int i = 1; i <= 2; i++) {
+            login("192.0.2." + (20 + i), username, "wrong-again-" + i).andExpect(status().isUnauthorized());
+        }
+        // 3 + 2 = 5 wrong guesses on ONE account: locked, whichever way you type it.
+        login("192.0.2.30", username.toUpperCase(), "right-password-1").andExpect(status().isTooManyRequests());
+        login("192.0.2.31", email, "right-password-1").andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     void successfulLoginClearsEarlierFailures() throws Exception {
         String email = "clumsy-" + UUID.randomUUID() + "@example.com";
         register(email);
@@ -114,7 +136,7 @@ class RateLimitTest {
     private void register(String email) throws Exception {
         mvc.perform(post("/api/auth/register").with(r -> { r.setRemoteAddr("10.0.0." + (int) (Math.random() * 250)); return r; })
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"right-password-1\"}"))
+                        .content(TestAccounts.registerJson(email, "right-password-1")))
                 .andExpect(status().isCreated());
     }
 

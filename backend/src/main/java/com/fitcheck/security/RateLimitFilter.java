@@ -35,7 +35,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/api/auth/forgot-password", new Rule(5, Duration.ofMinutes(15)),
             "/api/auth/reset-password", new Rule(10, Duration.ofMinutes(15)),
             "/api/auth/verify-email", new Rule(20, Duration.ofMinutes(15)),
-            "/api/auth/refresh", new Rule(60, Duration.ofMinutes(1)));
+            "/api/auth/refresh", new Rule(60, Duration.ofMinutes(1)),
+            // Typing a username checks it as you go: allow plenty, but not a scripted list of names.
+            "/api/auth/check-username", new Rule(60, Duration.ofMinutes(1)));
 
     private final RateLimiter limiter;
     private final JsonMapper jsonMapper;

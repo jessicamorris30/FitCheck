@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
- * Email + password sign-in. On success, go back to the page the user originally asked for
+ * Sign-in with email or username + password. On success, go back to the page the user originally asked for
  * (ProtectedRoute stores it in `location.state.from`), or to the wardrobe.
  */
 export default function LoginPage() {
@@ -22,7 +22,7 @@ export default function LoginPage() {
   const accountDeleted = navState?.accountDeleted === true
 
   // "Controlled" inputs: React state is the source of truth for what's typed.
-  const [email, setEmail] = useState('')
+  const [loginName, setLoginName] = useState('') // email or username
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -39,7 +39,7 @@ export default function LoginPage() {
     setFieldErrors({})
     setSubmitting(true)
     try {
-      await login(email, password)
+      await login(loginName, password)
       navigate(from, { replace: true })
     } catch (err) {
       const parsed = parseApiError(err)
@@ -75,12 +75,14 @@ export default function LoginPage() {
           </p>
         )}
         <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={fieldErrors.email}
+          label="Email or username"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={loginName}
+          onChange={(e) => setLoginName(e.target.value)}
+          error={fieldErrors.login}
           required
         />
         <TextField
