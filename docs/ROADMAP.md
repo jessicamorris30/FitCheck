@@ -58,7 +58,7 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
       "Finish your profile" for older accounts, edit on Account page, @username in the top bar
 - [x] 7.3 Your style (backend): up to 5 style photos + note (V8, `/users/me/style`); Claude writes private
       style notes in the background (one call per burst of changes, max 10/day, confirmed emails only)
-- [ ] 7.4 Your style (screen): "My style" on the Account page, on/off switch for the AI stylist
+- [x] 7.4 Your style (screen): "My style" on the Account page, on/off switch for the AI stylist
 - [ ] 7.5 The AI stylist uses your style in every request (Plan-mode input still wins for that request)
 - [ ] 7.6 Light / Dark / System theme, saved to the account and remembered per device
 - [ ] 7.7 Polish and release v1.3

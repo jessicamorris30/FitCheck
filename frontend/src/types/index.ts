@@ -83,6 +83,27 @@ export interface OutfitDay {
   date: string
 }
 
+// ---- My style (/api/users/me/style) ----
+
+export interface StylePhoto {
+  id: string
+  imageUrl: string
+  thumbnailUrl: string
+  addedAt: string
+}
+
+/** The user's own style, which the AI stylist takes into account (when useWithAi is on). */
+export interface Style {
+  /** The user's own words about their style; null if none. */
+  note: string | null
+  useWithAi: boolean
+  photos: StylePhoto[]
+  /** How many photos are allowed in total (5). */
+  maxPhotos: number
+  /** Null if the user has never set anything. */
+  updatedAt: string | null
+}
+
 // ---- AI stylist (/api/ai) ----
 
 export interface OutfitSuggestionRequest {

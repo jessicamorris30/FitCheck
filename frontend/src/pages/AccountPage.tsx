@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { parseApiError } from '../api/errors'
 import DeleteAccountSection from '../components/account/DeleteAccountSection'
+import MyStyleSection from '../components/account/MyStyleSection'
 import ProfileSection from '../components/account/ProfileSection'
 import Button from '../components/ui/Button'
 import TextField from '../components/ui/TextField'
@@ -8,7 +9,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /**
- * /account: your account details and settings: profile (name, username), change password,
+ * /account: your account details and settings: profile (name, username), my style, change password,
  * delete account.
  */
 export default function AccountPage() {
@@ -72,6 +73,8 @@ export default function AccountPage() {
       </header>
 
       <ProfileSection user={user} />
+
+      <MyStyleSection emailVerified={user.emailVerified} />
 
       <form
         onSubmit={handleSubmit}
