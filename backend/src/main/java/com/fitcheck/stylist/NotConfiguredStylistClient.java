@@ -33,4 +33,9 @@ public class NotConfiguredStylistClient implements StylistClient {
     public StylistModels.SuggestionResult suggest(StylistModels.SuggestionRequest request) {
         throw new AiUnavailableException(MESSAGE);
     }
+
+    @Override
+    public String describeStyle(StylistModels.StyleSample sample) {
+        throw new AiUnavailableException(MESSAGE);
+    }
 }

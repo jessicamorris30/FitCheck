@@ -36,6 +36,16 @@ public interface StylistClient {
      */
     StylistModels.SuggestionResult suggest(StylistModels.SuggestionRequest request);
 
+    /**
+     * Writes the stylist's private notes on a user's personal style from their style photos and/or
+     * note (Phase 7). Stored and added to their stylist requests; never shown to the user.
+     *
+     * @return the description, or null if the material holds no usable style information
+     * @throws AiRefusedException    if Claude declines
+     * @throws AiUnavailableException if not configured or the API fails
+     */
+    String describeStyle(StylistModels.StyleSample sample);
+
     /** Result of {@link #checkConnection()}: what Claude replied and how many tokens it took. */
     record ConnectionCheck(String model, String reply, long inputTokens, long outputTokens) {
     }

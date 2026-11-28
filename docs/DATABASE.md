@@ -16,10 +16,15 @@ erDiagram
   clothing_items ||--o{ outfit_items : "used in"
   users ||--o{ planned_outfits : plans
   outfits ||--o{ planned_outfits : "planned on"
+  users ||--o| user_styles : "has style"
+  users ||--o{ style_images : "style photos"
 
   users {
     uuid id PK
     varchar email "unique, case-insensitive"
+    varchar username "unique, lower case; null for pre-Phase-7 accounts until set"
+    varchar first_name
+    varchar last_name
     varchar password_hash "BCrypt"
     timestamptz email_verified_at "null until confirmed"
     timestamptz created_at
@@ -68,6 +73,22 @@ erDiagram
     uuid outfit_id FK "unique with day"
     date day "plain day, no time zone"
     timestamptz created_at "order within a day"
+  }
+  user_styles {
+    uuid user_id PK,FK
+    text note "the user's own words"
+    boolean use_with_ai
+    text ai_description "Claude's private notes, never sent to the browser"
+    int version "+1 per change to photos or note"
+    int described_version "notes are stale if behind version"
+    date descriptions_day
+    int descriptions_count "max 10 per day"
+  }
+  style_images {
+    uuid id PK
+    uuid user_id FK
+    varchar blob_name "users/<id>/style/..., 1024 px JPEG"
+    varchar thumbnail_blob_name
   }
 ```
 

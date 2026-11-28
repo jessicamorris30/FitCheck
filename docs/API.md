@@ -40,6 +40,19 @@ Errors use one shape (`ApiError`):
 | DELETE | `/users/me` | Body `{ password }`. `204`: the account and everything in it are deleted (database rows by cascade; files under `users/<id>/` after commit) and the refresh cookie is cleared. `400` with `fieldErrors.password` if the password is wrong |
 | POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
 
+## My style (Phase 7)
+
+The logged-in user's own style, used by the AI stylist. Every answer is the whole style as the browser may see it. Claude's private notes on the style (written in the background from the photos and note) are **never** included.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/users/me/style` | none | `StyleResponse` |
+| PUT | `/users/me/style` | `{ note?, useWithAi }` (note at most 1000 characters; blank = none) | `StyleResponse` |
+| POST | `/users/me/style/photos` | multipart `image` (JPEG/PNG/WebP, at most 10 MB) | `201 StyleResponse`; `400` not an image or already 5 photos. Stored as a 1024 px JPEG (no metadata) plus a 320 px thumbnail |
+| DELETE | `/users/me/style/photos/{id}` | none | `StyleResponse`; `404` if not yours |
+
+`StyleResponse`: `{ note, useWithAi, photos: [{ id, imageUrl, thumbnailUrl, addedAt }], maxPhotos: 5, updatedAt }`.
+
 ## Clothing
 
 | Method | Path | Body | Response |

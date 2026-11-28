@@ -38,4 +38,18 @@ public class FakeStylistClient implements StylistClient {
         lastRequest = request;
         return answer.apply(request);
     }
+
+    /** What the next describeStyle() call returns (or throws). Default: a description naming the inputs. */
+    public java.util.function.Function<com.fitcheck.stylist.StylistModels.StyleSample, String> styleAnswer =
+            sample -> "Fake style notes: " + sample.photosJpeg().size() + " photo(s), note: " + sample.note();
+
+    public com.fitcheck.stylist.StylistModels.StyleSample lastStyleSample;
+    public int describeCalls;
+
+    @Override
+    public String describeStyle(com.fitcheck.stylist.StylistModels.StyleSample sample) {
+        lastStyleSample = sample;
+        describeCalls++;
+        return styleAnswer.apply(sample);
+    }
 }

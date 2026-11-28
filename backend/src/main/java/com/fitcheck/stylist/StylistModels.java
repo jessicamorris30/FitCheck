@@ -35,6 +35,15 @@ public final class StylistModels {
         }
     }
 
+    /**
+     * A user's examples of their own style (Phase 7): up to 5 photos and/or a note in their words.
+     *
+     * @param photosJpeg already downscaled JPEGs (no metadata); may be empty
+     * @param note       the user's own description; may be null
+     */
+    public record StyleSample(List<byte[]> photosJpeg, String note) {
+    }
+
     /** One suggested outfit, pointing at wardrobe entries by id. */
     public record Suggestion(String title, List<UUID> itemIds, String reasoning) {
     }

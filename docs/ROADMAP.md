@@ -56,7 +56,8 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
       or username (one wrong-password lock per account), `PUT /users/me/profile`, `check-username`
 - [x] 7.2 Accounts (screens): sign-up fields with live username check, "Email or username" login,
       "Finish your profile" for older accounts, edit on Account page, @username in the top bar
-- [ ] 7.3 Your style (backend): up to 5 style photos + text; Claude writes a private style description
+- [x] 7.3 Your style (backend): up to 5 style photos + note (V8, `/users/me/style`); Claude writes private
+      style notes in the background (one call per burst of changes, max 10/day, confirmed emails only)
 - [ ] 7.4 Your style (screen): "My style" on the Account page, on/off switch for the AI stylist
 - [ ] 7.5 The AI stylist uses your style in every request (Plan-mode input still wins for that request)
 - [ ] 7.6 Light / Dark / System theme, saved to the account and remembered per device
