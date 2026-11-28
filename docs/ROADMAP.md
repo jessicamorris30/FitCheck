@@ -35,7 +35,7 @@
 Put saved outfits on specific days ("wear this on Friday"); several per day; past days double as a
 "what I wore" history.
 - [x] 6.1 Backend: `planned_outfits` table (V6), `CalendarService`, `/api/calendar` (list a range, plan, remove)
-- [ ] 6.2 Calendar page: week view, add/remove outfits, nav link
+- [x] 6.2 Calendar page: week view (Mon–Sun, week kept in the address), add/remove outfits, nav link
 - [ ] 6.3 Month view; "Plan this outfit" on outfit pages
 - [ ] 6.4 Polish (phone layout, empty states), release v1.2
 

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AccountPage from './pages/AccountPage.tsx'
+import CalendarPage from './pages/CalendarPage.tsx'
 import Layout from './components/layout/Layout.tsx'
 import ClothingDetailPage from './pages/ClothingDetailPage.tsx'
 import ForgotPasswordPage from './pages/ForgotPasswordPage.tsx'
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/account" element={<AccountPage />} />
           <Route path="/outfits/:id" element={<OutfitDetailPage />} />
           <Route path="/outfits/:id/edit" element={<EditOutfitPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Route>
       </Route>
 

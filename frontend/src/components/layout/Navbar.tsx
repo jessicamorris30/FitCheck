@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 
-/** Top navigation: Wardrobe, Plan, and the signed-in user with a logout button. */
+/** Top navigation: Wardrobe, Plan, Outfits, Calendar, and the signed-in user with a logout button. */
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -25,6 +25,9 @@ export default function Navbar() {
       </NavLink>
       <NavLink to="/outfits" className={link}>
         Outfits
+      </NavLink>
+      <NavLink to="/calendar" className={link}>
+        Calendar
       </NavLink>
 
       <div className="ml-auto flex items-center gap-4 text-sm">

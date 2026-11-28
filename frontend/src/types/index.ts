@@ -58,6 +58,17 @@ export interface Outfit {
   updatedAt: string
 }
 
+// ---- Outfit calendar (/api/calendar) ----
+
+/** One outfit put on one day. */
+export interface PlannedOutfit {
+  /** The calendar entry's own id (to remove it), not the outfit's. */
+  id: string
+  /** The day, "YYYY-MM-DD". */
+  date: string
+  outfit: Outfit
+}
+
 // ---- AI stylist (/api/ai) ----
 
 export interface OutfitSuggestionRequest {
