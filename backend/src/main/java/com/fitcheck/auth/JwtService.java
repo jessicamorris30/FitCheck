@@ -32,6 +32,13 @@ public class JwtService {
 
     private static final String ISSUER = "fitcheck";
     private static final String EMAIL_CLAIM = "email";
+    /**
+     * What a token is for. Access tokens have none (as since Phase 1); the admin "2-step done" pass
+     * (Phase 8.2) says "admin-2fa". Each parser refuses the other kind, so one can never be used as
+     * the other even though both are signed with the same key.
+     */
+    private static final String TYPE_CLAIM = "typ";
+    private static final String ADMIN_2FA_TYPE = "admin-2fa";
 
     private final SecretKey key;
     private final JwtProperties properties;
@@ -75,8 +82,45 @@ public class JwtService {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+            if (claims.get(TYPE_CLAIM) != null) {
+                return Optional.empty(); // e.g. an admin 2-step pass: not an access token
+            }
             return Optional.of(new AuthenticatedUser(
                     UUID.fromString(claims.getSubject()), claims.get(EMAIL_CLAIM, String.class)));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The admin "2-step verification done" pass (Phase 8.2): proves this user typed a valid code
+     * recently. Kept in an HttpOnly cookie sent only to /api/admin; useless without a valid
+     * access token for the same user.
+     */
+    public String createAdmin2faPass(UUID userId, java.time.Duration validFor) {
+        Instant now = clock.instant();
+        return Jwts.builder()
+                .issuer(ISSUER)
+                .subject(userId.toString())
+                .claim(TYPE_CLAIM, ADMIN_2FA_TYPE)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(validFor)))
+                .signWith(key)
+                .compact();
+    }
+
+    /** The user id in a valid, unexpired admin 2-step pass; empty for anything else. */
+    public Optional<UUID> parseAdmin2faPass(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(key)
+                    .requireIssuer(ISSUER)
+                    .require(TYPE_CLAIM, ADMIN_2FA_TYPE)
+                    .clock(() -> Date.from(clock.instant()))
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            return Optional.of(UUID.fromString(claims.getSubject()));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

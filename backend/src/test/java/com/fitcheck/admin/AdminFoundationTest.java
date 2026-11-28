@@ -124,9 +124,10 @@ class AdminFoundationTest {
     void theAdminAreaIsOpenToTheAdminAndShownInTheirProfile() throws Exception {
         User boss = account("boss@example.com", true);
 
+        // The admin area exists for them, but asks for 2-step login first (step 8.2, see AdminTwoFactorTest).
         mvc.perform(get("/api/admin/me").header("Authorization", bearer(boss)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.admin").value(true));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value(AdminGuard.NEEDS_SETUP));
         mvc.perform(get("/api/users/me").header("Authorization", bearer(boss)))
                 .andExpect(jsonPath("$.admin").value(true));
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)

@@ -101,6 +101,19 @@ Only for admin accounts: the email must be in the server's `ADMIN_EMAILS` settin
 |---|---|---|
 | GET | `/admin/me` | `{ id, email, admin: true }` |
 
+**2-step login (8.2).** Every admin endpoint except `/admin/2fa/*` also needs the "code entered" pass: an HttpOnly cookie `fitcheck_admin` (Path `/api/admin`, SameSite=Strict, 8 hours, for one admin; useless without that admin's login token). Without it: `403` "Set up two-step verification..." or "Enter the code from your authenticator app...". Logging out clears it.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/admin/2fa/status` | none | `{ enabled, unlocked, recoveryCodesLeft }` |
+| POST | `/admin/2fa/setup` | none | `{ secret, otpauthUri }` (for the QR code); `409` if already on |
+| POST | `/admin/2fa/enable` | `{ code }` | `{ recoveryCodes: [10 × "ABCDE-FGHJK"] }` shown once + the pass cookie |
+| POST | `/admin/2fa/verify` | `{ code }` (6 digits, or a backup code) | `204` + the pass cookie |
+| POST | `/admin/2fa/disable` | `{ password, code }` | `204`, pass cleared, backup codes deleted |
+| POST | `/admin/2fa/recovery-codes` | `{ code }` | new backup codes (old ones stop working) |
+
+Codes: standard TOTP (RFC 6238; 6 digits, 30 s, ±1 step), each code usable once. Wrong code → `400 fieldErrors.code`; 5 wrong codes in 15 min → `429`.
+
 Frozen accounts: login with the right password → `403` "This account has been suspended..." (a wrong password still gets the normal `401`, so guessers learn nothing); session refresh → `401`; any existing access token stops working at once.
 
 `UserResponse.admin` is `true` for the admin (to show the Admin link). `GET /ai/usage` has `unlimited: true` for admins: no daily limit (requests are still counted).

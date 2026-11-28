@@ -59,6 +59,19 @@ public class User {
     @Column(name = "last_active_at")
     private Instant lastActiveAt;
 
+    /** 2-step login (admin, V11): the authenticator secret once enabled. Never in any response. */
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+
+    @Column(name = "totp_pending_secret", length = 64)
+    private String totpPendingSecret;
+
+    @Column(name = "totp_enabled_at")
+    private Instant totpEnabledAt;
+
+    @Column(name = "totp_last_step")
+    private Long totpLastStep;
+
     /** When the user clicked the link in their confirmation email; null until then. */
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -136,6 +149,51 @@ public class User {
     public void unfreeze() {
         this.frozenAt = null;
         this.frozenReason = null;
+    }
+
+    public boolean isTotpEnabled() {
+        return totpEnabledAt != null && totpSecret != null;
+    }
+
+    public String getTotpSecret() {
+        return totpSecret;
+    }
+
+    public String getTotpPendingSecret() {
+        return totpPendingSecret;
+    }
+
+    public Instant getTotpEnabledAt() {
+        return totpEnabledAt;
+    }
+
+    /** -1 if no code has been accepted yet. */
+    public long getTotpLastStep() {
+        return totpLastStep == null ? -1 : totpLastStep;
+    }
+
+    public void setTotpLastStep(long step) {
+        this.totpLastStep = step;
+    }
+
+    /** Setup begins: a new secret waits until a working code proves the phone has it. */
+    public void startTotpSetup(String secret) {
+        this.totpPendingSecret = secret;
+    }
+
+    /** A working code was typed: the pending secret becomes THE secret. */
+    public void enableTotp(Instant now, long acceptedStep) {
+        this.totpSecret = this.totpPendingSecret;
+        this.totpPendingSecret = null;
+        this.totpEnabledAt = now;
+        this.totpLastStep = acceptedStep;
+    }
+
+    public void disableTotp() {
+        this.totpSecret = null;
+        this.totpPendingSecret = null;
+        this.totpEnabledAt = null;
+        this.totpLastStep = null;
     }
 
     public Instant getLastLoginAt() {

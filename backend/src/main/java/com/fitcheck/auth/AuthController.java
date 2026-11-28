@@ -14,6 +14,7 @@ import com.fitcheck.common.exception.ApiError;
 import com.fitcheck.common.exception.UnauthorizedException;
 import com.fitcheck.config.JwtProperties;
 import com.fitcheck.admin.AdminAccess;
+import com.fitcheck.admin.AdminPassCookie;
 import com.fitcheck.user.User;
 import com.fitcheck.user.UserService;
 import com.fitcheck.user.dto.UserResponse;
@@ -48,15 +49,18 @@ public class AuthController {
     private final JwtProperties jwt;
     private final UserService userService;
     private final AdminAccess adminAccess;
+    private final AdminPassCookie adminPass;
 
     public AuthController(AuthService authService, EmailVerificationService emailVerification,
-            PasswordResetService passwordReset, JwtProperties jwt, UserService userService, AdminAccess adminAccess) {
+            PasswordResetService passwordReset, JwtProperties jwt, UserService userService, AdminAccess adminAccess,
+            AdminPassCookie adminPass) {
         this.authService = authService;
         this.emailVerification = emailVerification;
         this.passwordReset = passwordReset;
         this.jwt = jwt;
         this.userService = userService;
         this.adminAccess = adminAccess;
+        this.adminPass = adminPass;
     }
 
     /**
@@ -147,14 +151,21 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    /** POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice. */
+    /**
+     * POST /api/auth/logout → 204, session revoked and cookie cleared. Safe to call twice.
+     * Also clears the admin "2-step code entered" pass, so the next person on this browser
+     * would have to enter a code even if they knew the admin's password.
+     */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         String token = readRefreshCookie(request);
         if (token != null) {
             authService.logout(token);
         }
-        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, clearCookie().toString()).build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, clearCookie().toString())
+                .header(HttpHeaders.SET_COOKIE, adminPass.clear().toString())
+                .build();
     }
 
     // ---- cookie helpers ----

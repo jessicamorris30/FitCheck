@@ -70,7 +70,9 @@ Admin = an account whose email is in the server's ADMIN_EMAILS setting (never in
 - [x] 8.1 Foundation: admin check, `/api/admin` hidden from everyone else (404 like an unknown page),
       frozen accounts cut off immediately (login, session refresh and every request), last login /
       last active, admin audit log (V10), no AI limits for admins (usage still recorded)
-- [ ] 8.2 2-step login (authenticator app) for admin, re-type password for destructive actions
+- [x] 8.2 2-step login (authenticator app, RFC 6238) for admin: QR setup, 10 one-time backup codes,
+      8-hour unlock (HttpOnly cookie for /api/admin only), 5 wrong codes per 15 min, codes usable once;
+      re-type password check ready for 8.3
 - [ ] 8.3 User management: list (everything but passwords, plus counts), freeze/unfreeze, force password
       reset, sign out everywhere, resend confirmation, delete; users are emailed
 - [ ] 8.4 Admin screens

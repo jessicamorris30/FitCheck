@@ -75,7 +75,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 "Too many attempts. Please wait " + humanize(retryAfterSeconds) + " and try again."));
     }
 
-    static String humanize(long seconds) {
+    public static String humanize(long seconds) {
         if (seconds < 60) {
             return seconds + " second" + (seconds == 1 ? "" : "s");
         }
