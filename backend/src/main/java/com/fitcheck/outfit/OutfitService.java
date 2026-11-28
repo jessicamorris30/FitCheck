@@ -97,7 +97,12 @@ public class OutfitService {
         outfits.delete(findOwned(ownerId, outfitId));
     }
 
-    Outfit findOwned(UUID ownerId, UUID outfitId) {
+    /**
+     * The outfit, only if it's this owner's (also used by the calendar).
+     *
+     * @throws NotFoundException if there's no such outfit owned by this user
+     */
+    public Outfit findOwned(UUID ownerId, UUID outfitId) {
         return outfits.findByIdAndOwner_Id(outfitId, ownerId)
                 .orElseThrow(() -> new NotFoundException("Outfit not found"));
     }
@@ -123,7 +128,8 @@ public class OutfitService {
         return aiPrompt == null || aiPrompt.isBlank() ? null : aiPrompt.trim();
     }
 
-    private OutfitResponse toResponse(Outfit outfit) {
+    /** The outfit as sent to the browser, with signed photo links (also used by the calendar). */
+    public OutfitResponse toResponse(Outfit outfit) {
         List<ClothingItemResponse> items = outfit.getClothingItems().stream()
                 .map(c -> ClothingItemResponse.from(c, storage))
                 .toList();
