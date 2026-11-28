@@ -51,7 +51,7 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
 - [x] Go-live check, including AI prompt-injection tests and a rate-limit spoofing fix
 - [x] Monitoring: alerts, budget, saved log searches; [DEPLOYMENT.md](DEPLOYMENT.md)
 
-## Phase 7: Profiles, your style, light/dark mode (in progress)
+## Phase 7: Profiles, your style, light/dark mode ✅ (v1.3.0)
 - [x] 7.1 Accounts (backend): username + first/last name (V7), sign-up requires them, log in with email
       or username (one wrong-password lock per account), `PUT /users/me/profile`, `check-username`
 - [x] 7.2 Accounts (screens): sign-up fields with live username check, "Email or username" login,
@@ -62,7 +62,8 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
 - [x] 7.5 The AI stylist uses your style in every request (Plan-mode input still wins for that request)
 - [x] 7.6 Light / Dark / System theme, saved to the account (V9) and remembered per device; dark mode
       swaps the colour palette (index.css), no white flash (public/theme-init.js)
-- [ ] 7.7 Polish and release v1.3
+- [x] 7.7 Polish and release v1.3: "Using your saved style" hint in the stylist panel, privacy note
+      mentions the style notes
 
 ## Later
 - [x] Two tabs refreshing at the same moment (e.g. opening an email link in a new tab) no longer trip

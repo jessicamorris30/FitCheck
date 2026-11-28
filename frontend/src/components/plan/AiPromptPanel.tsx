@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { getAiUsage, suggestOutfits } from '../../api/ai'
 import { resendVerificationEmail } from '../../api/auth'
 import { parseApiError } from '../../api/errors'
-import type { AiUsage, OutfitSuggestion } from '../../types'
+import { getStyle } from '../../api/style'
+import type { AiUsage, OutfitSuggestion, Style } from '../../types'
 import Button from '../ui/Button'
 import SuggestionList from './SuggestionList'
 
@@ -33,6 +35,7 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
   const [error, setError] = useState<{ status: number; message: string } | null>(null)
   const [suggestions, setSuggestions] = useState<OutfitSuggestion[] | null>(null)
   const [resent, setResent] = useState(false)
+  const [style, setStyle] = useState<Style | null>(null)
 
   // How many requests are left today (free call, no Claude involved).
   const refreshUsage = () =>
@@ -42,6 +45,19 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
   useEffect(() => {
     refreshUsage()
   }, [])
+
+  // Is the user's saved style in use? Only to show a hint; the style itself is added on the server.
+  useEffect(() => {
+    let cancelled = false
+    getStyle()
+      .then((loaded) => !cancelled && setStyle(loaded))
+      .catch(() => {}) // no hint then; the stylist works the same
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const hasStyle = style !== null && (style.photos.length > 0 || style.note !== null)
+  const styleInUse = hasStyle && style.useWithAi
 
   // A ticking "12 s" while waiting, so a long wait doesn't look like a freeze.
   useEffect(() => {
@@ -118,6 +134,21 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
           <p className="text-sm text-gray-600">
             Describe a look, add an inspiration photo, or both. You'll get up to 3 outfits made from your own wardrobe.
           </p>
+          {style && (
+            <p className="mt-1 text-sm">
+              {styleInUse ? (
+                <span className="text-violet-700">✓ Using your saved style</span>
+              ) : hasStyle ? (
+                <span className="text-gray-500">Your saved style is switched off</span>
+              ) : (
+                <span className="text-gray-500">Tip: add your style to your profile so the stylist already knows what you like</span>
+              )}{' '}
+              ·{' '}
+              <Link to="/account#my-style" className="font-medium text-gray-700 underline hover:text-gray-900">
+                {styleInUse ? 'Change' : hasStyle ? 'Turn it on' : 'Add it'}
+              </Link>
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -194,8 +225,9 @@ export default function AiPromptPanel({ onClose, onUse }: AiPromptPanelProps) {
       </form>
 
       <p className="text-xs text-gray-500">
-        🔒 Your description, inspiration photo and wardrobe (item details and small photos) are sent to Anthropic's
-        Claude only when you press Get suggestions. The inspiration photo isn't saved.
+        🔒 Your description, inspiration photo, wardrobe (item details and small photos) and, when it's switched on,
+        notes on your saved style are sent to Anthropic's Claude only when you press Get suggestions. The inspiration
+        photo isn't saved.
       </p>
 
       {loading && (

@@ -32,6 +32,10 @@ export default function MyStyleSection({ emailVerified }: { emailVerified: boole
         if (cancelled) return
         setStyle(loaded)
         setNote(loaded.note ?? '')
+        // Arrived from the stylist's "Change / Add it" link: bring this section into view.
+        if (window.location.hash === '#my-style') {
+          requestAnimationFrame(() => document.getElementById('my-style')?.scrollIntoView({ behavior: 'smooth' }))
+        }
       })
       .catch((err) => !cancelled && setLoadError(parseApiError(err).message))
     return () => {
@@ -133,7 +137,7 @@ export default function MyStyleSection({ emailVerified }: { emailVerified: boole
   }
 
   return (
-    <section aria-labelledby="my-style-heading" className="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-6">
+    <section id="my-style" aria-labelledby="my-style-heading" className="scroll-mt-6 flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-sm">
           <h2 id="my-style-heading" className="text-lg font-semibold">
