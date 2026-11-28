@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import ThemeToggle from '../ui/ThemeToggle'
 
 /** Top navigation: Wardrobe, Plan, Outfits, Calendar, and the signed-in user with a logout button. */
 export default function Navbar() {
@@ -31,6 +32,7 @@ export default function Navbar() {
       </NavLink>
 
       <div className="ml-auto flex items-center gap-4 text-sm">
+        <ThemeToggle />
         {user && (
           <NavLink to="/account" title={`Your account (${user.email})`} className={link}>
             {user.username ? `@${user.username}` : user.email}

@@ -4,6 +4,7 @@ import com.fitcheck.auth.AuthenticatedUser;
 import com.fitcheck.auth.EmailVerificationService;
 import com.fitcheck.config.JwtProperties;
 import com.fitcheck.user.dto.DeleteAccountRequest;
+import com.fitcheck.user.dto.PreferencesRequest;
 import com.fitcheck.user.dto.ProfileRequest;
 import com.fitcheck.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -62,6 +63,16 @@ public class UserController {
     public UserResponse updateProfile(@AuthenticationPrincipal AuthenticatedUser me,
             @Valid @RequestBody ProfileRequest request) {
         return UserResponse.from(userService.updateProfile(me.id(), request));
+    }
+
+    /**
+     * PUT /api/users/me/preferences {"theme": "system" | "light" | "dark"} → the updated user.
+     * Saved on the account so the choice follows the user to every device.
+     */
+    @PutMapping("/me/preferences")
+    public UserResponse updatePreferences(@AuthenticationPrincipal AuthenticatedUser me,
+            @Valid @RequestBody PreferencesRequest request) {
+        return UserResponse.from(userService.updateTheme(me.id(), request.theme()));
     }
 
     /**

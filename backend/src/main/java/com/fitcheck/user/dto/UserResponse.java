@@ -12,6 +12,7 @@ import java.util.UUID;
  * @param emailVerified   whether the user has clicked the link in their confirmation email
  * @param profileComplete false until username, first and last name are all set (the app then
  *                        asks for them before anything else)
+ * @param theme           "system", "light" or "dark"; null if never chosen (= follow the device)
  */
 public record UserResponse(
         UUID id,
@@ -20,11 +21,13 @@ public record UserResponse(
         String firstName,
         String lastName,
         boolean profileComplete,
+        String theme,
         boolean emailVerified,
         Instant createdAt) {
 
     public static UserResponse from(User user) {
         return new UserResponse(user.getId(), user.getEmail(), user.getUsername(), user.getFirstName(),
-                user.getLastName(), user.isProfileComplete(), user.isEmailVerified(), user.getCreatedAt());
+                user.getLastName(), user.isProfileComplete(), user.getTheme(), user.isEmailVerified(),
+                user.getCreatedAt());
     }
 }

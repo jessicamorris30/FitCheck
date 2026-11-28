@@ -188,7 +188,7 @@ export default function ClothingDetailPage() {
                     <button
                       onClick={handleDelete}
                       disabled={busy}
-                      className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                      className="rounded-lg bg-red-600 px-4 py-2 font-medium text-snow hover:bg-red-700 dark:hover:bg-red-400 disabled:opacity-60"
                     >
                       {busy ? 'Deleting…' : 'Delete'}
                     </button>

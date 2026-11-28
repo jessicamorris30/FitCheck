@@ -61,7 +61,7 @@ export default function SavedOutfitsList() {
               {outfit.aiPrompt && (
                 <span
                   title={`AI stylist: “${outfit.aiPrompt}”`}
-                  className="absolute top-2 left-2 rounded-full bg-violet-600/90 px-2 py-0.5 text-xs font-medium text-white"
+                  className="absolute top-2 left-2 rounded-full bg-violet-600/90 px-2 py-0.5 text-xs font-medium text-snow"
                 >
                   ✨ AI
                 </span>

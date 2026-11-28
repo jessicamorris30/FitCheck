@@ -54,6 +54,14 @@ public class UserService {
         return takenBySomeoneElse ? USERNAME_TAKEN : null;
     }
 
+    /** Saves the user's light/dark choice ("system", "light" or "dark", already validated). */
+    @Transactional
+    public User updateTheme(UUID userId, String theme) {
+        User user = getById(userId);
+        user.setTheme(theme);
+        return user;
+    }
+
     /**
      * Sets or changes the user's username and name ("finish your profile" and the Account page).
      *

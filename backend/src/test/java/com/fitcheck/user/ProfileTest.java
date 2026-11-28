@@ -153,6 +153,31 @@ class ProfileTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // ---- light / dark mode (step 7.6) ----
+
+    @Test
+    void themeIsSavedOnTheAccount() throws Exception {
+        String me = bearerFrom(register(signUp("theme@example.com", "theme.user")));
+
+        mvc.perform(get("/api/users/me").header("Authorization", me))
+                .andExpect(jsonPath("$.theme").doesNotExist()); // never chosen: follow the device
+
+        mvc.perform(put("/api/users/me/preferences").header("Authorization", me)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"dark\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.theme").value("dark"));
+        mvc.perform(get("/api/users/me").header("Authorization", me))
+                .andExpect(jsonPath("$.theme").value("dark"));
+        // ...and it comes along when logging in on another device.
+        login("{\"login\":\"theme.user\",\"password\":\"long-enough-1\"}")
+                .andExpect(jsonPath("$.user.theme").value("dark"));
+
+        mvc.perform(put("/api/users/me/preferences").header("Authorization", me)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"theme\":\"purple\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.theme").value("Theme must be system, light or dark"));
+    }
+
     // ---- live username check ----
 
     @Test

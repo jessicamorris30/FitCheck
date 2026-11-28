@@ -103,7 +103,7 @@ export default function DeleteAccountSection() {
             <button
               type="submit"
               disabled={!password || !understood || deleting}
-              className="rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-red-600 px-4 py-2 font-medium text-snow hover:bg-red-700 dark:hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {deleting ? 'Deleting…' : 'Delete my account'}
             </button>

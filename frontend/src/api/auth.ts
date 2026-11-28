@@ -41,6 +41,12 @@ export async function checkUsername(username: string): Promise<UsernameCheck> {
   return data
 }
 
+/** Saves the light/dark choice on the account, so it follows the user to other devices. */
+export async function updatePreferences(preferences: { theme: 'system' | 'light' | 'dark' }): Promise<User> {
+  const { data } = await api.put<User>('/users/me/preferences', preferences)
+  return data
+}
+
 /** Sets or changes the logged-in user's username and name. */
 export async function updateProfile(input: ProfileInput): Promise<User> {
   const { data } = await api.put<User>('/users/me/profile', input)

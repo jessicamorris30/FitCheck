@@ -60,7 +60,8 @@ Put saved outfits on specific days ("wear this on Friday"); several per day; pas
       style notes in the background (one call per burst of changes, max 10/day, confirmed emails only)
 - [x] 7.4 Your style (screen): "My style" on the Account page, on/off switch for the AI stylist
 - [x] 7.5 The AI stylist uses your style in every request (Plan-mode input still wins for that request)
-- [ ] 7.6 Light / Dark / System theme, saved to the account and remembered per device
+- [x] 7.6 Light / Dark / System theme, saved to the account (V9) and remembered per device; dark mode
+      swaps the colour palette (index.css), no white flash (public/theme-init.js)
 - [ ] 7.7 Polish and release v1.3
 
 ## Later

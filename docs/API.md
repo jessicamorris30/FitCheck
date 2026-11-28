@@ -35,8 +35,9 @@ Errors use one shape (`ApiError`):
 
 | Method | Path | Response |
 |---|---|---|
-| GET | `/users/me` | `UserResponse` `{ id, email, username, firstName, lastName, profileComplete, emailVerified, createdAt }`. `profileComplete` is false for accounts from before usernames existed until they set one |
+| GET | `/users/me` | `UserResponse` `{ id, email, username, firstName, lastName, profileComplete, theme, emailVerified, createdAt }`. `profileComplete` is false for accounts from before usernames existed until they set one |
 | PUT | `/users/me/profile` | Body `{ username, firstName, lastName }` → `UserResponse`. `400` with `fieldErrors` (`username` if taken or reserved) |
+| PUT | `/users/me/preferences` | Body `{ theme }` (`system`, `light` or `dark`) → `UserResponse`; saved on the account so it follows the user to every device |
 | DELETE | `/users/me` | Body `{ password }`. `204`: the account and everything in it are deleted (database rows by cascade; files under `users/<id>/` after commit) and the refresh cookie is cleared. `400` with `fieldErrors.password` if the password is wrong |
 | POST | `/users/me/verification-email` | `204` sent, `409` already verified, `429` too soon (60 s cooldown) |
 

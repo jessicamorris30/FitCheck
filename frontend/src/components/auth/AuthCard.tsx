@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import ThemeToggle from '../ui/ThemeToggle'
 
 interface AuthCardProps {
   title: string
@@ -10,7 +11,11 @@ interface AuthCardProps {
 /** Centered card layout shared by the Login and Register pages. */
 export default function AuthCard({ title, subtitle, children, footer }: AuthCardProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      {/* Light/dark mode works before logging in too (remembered on this device). */}
+      <div className="absolute top-3 right-3">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <p className="mb-8 text-center text-2xl font-bold tracking-tight">FitCheck</p>
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">

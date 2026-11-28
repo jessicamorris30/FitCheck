@@ -9,6 +9,8 @@ export interface User {
   lastName: string | null
   /** False until username, first and last name are set; the app asks for them first. */
   profileComplete: boolean
+  /** Light/dark choice saved on the account; null if never chosen (follow the device). */
+  theme: 'system' | 'light' | 'dark' | null
   /** True once the user clicked the link in their confirmation email. */
   emailVerified: boolean
   createdAt: string

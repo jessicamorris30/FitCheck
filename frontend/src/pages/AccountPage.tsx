@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { parseApiError } from '../api/errors'
+import AppearanceSection from '../components/account/AppearanceSection'
 import DeleteAccountSection from '../components/account/DeleteAccountSection'
 import MyStyleSection from '../components/account/MyStyleSection'
 import ProfileSection from '../components/account/ProfileSection'
@@ -75,6 +76,8 @@ export default function AccountPage() {
       <ProfileSection user={user} />
 
       <MyStyleSection emailVerified={user.emailVerified} />
+
+      <AppearanceSection />
 
       <form
         onSubmit={handleSubmit}

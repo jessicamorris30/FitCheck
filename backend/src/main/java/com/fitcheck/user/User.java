@@ -40,6 +40,10 @@ public class User {
     @Column(name = "last_name", length = 50)
     private String lastName;
 
+    /** "system", "light" or "dark"; null = never chosen (treated like "system"). */
+    @Column(length = 10)
+    private String theme;
+
     /** When the user clicked the link in their confirmation email; null until then. */
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
@@ -94,6 +98,14 @@ public class User {
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
+    }
+
+    public String getTheme() {
+        return theme;
+    }
+
+    public void setTheme(String theme) {
+        this.theme = theme;
     }
 
     /** False for accounts made before usernames existed, until they fill them in. */
